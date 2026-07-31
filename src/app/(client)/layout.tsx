@@ -4,11 +4,11 @@ import { AppHeader } from "@/components/app-header";
 import { getClientContext } from "@/lib/data/client-context";
 
 const LINKS: NavLink[] = [
-  { href: "/dashboard", label: "Il mio progetto", icon: LayoutDashboard },
-  { href: "/foto", label: "Foto", icon: ImageIcon },
-  { href: "/documenti", label: "Documenti", icon: FileText },
-  { href: "/chat", label: "Messaggi", icon: MessageCircle },
-  { href: "/impostazioni", label: "Impostazioni", icon: Settings },
+  { href: "/dashboard", label: "Il mio progetto", icon: <LayoutDashboard className="h-4 w-4" /> },
+  { href: "/foto", label: "Foto", icon: <ImageIcon className="h-4 w-4" /> },
+  { href: "/documenti", label: "Documenti", icon: <FileText className="h-4 w-4" /> },
+  { href: "/chat", label: "Messaggi", icon: <MessageCircle className="h-4 w-4" /> },
+  { href: "/impostazioni", label: "Impostazioni", icon: <Settings className="h-4 w-4" /> },
 ];
 
 export default async function ClientLayout({ children }: { children: React.ReactNode }) {

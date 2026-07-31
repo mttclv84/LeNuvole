@@ -6,9 +6,9 @@ import { getStaffContext } from "@/lib/data/staff-context";
 export default async function StaffLayout({ children }: { children: React.ReactNode }) {
   const { profile } = await getStaffContext();
 
-  const links: NavLink[] = [{ href: "/staff", label: "Cantieri", icon: Building2 }];
+  const links: NavLink[] = [{ href: "/staff", label: "Cantieri", icon: <Building2 className="h-4 w-4" /> }];
   if (profile.role === "owner") {
-    links.push({ href: "/staff/utenti", label: "Utenti", icon: Users });
+    links.push({ href: "/staff/utenti", label: "Utenti", icon: <Users className="h-4 w-4" /> });
   }
 
   return (
