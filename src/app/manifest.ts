@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
 
-// Icone e colori sono placeholder (vedi scripts/generate-placeholder-icons.py)
-// da sostituire quando Bea fornisce il logo/brand definitivo.
+// Icone generate da scripts/generate-placeholder-icons.py a partire dal
+// monogramma del Brand Manual (triangolo + "N"). Colori da Brand Manual Le
+// Nuvole — vedi src/app/globals.css per la fonte dei valori.
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Le Nuvole Casa&Design — Il tuo progetto",
@@ -9,8 +10,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Segui l'avanzamento del tuo progetto Le Nuvole Casa&Design in un unico posto.",
     start_url: "/",
     display: "standalone",
-    background_color: "#faf9f6",
-    theme_color: "#5b7fa6",
+    background_color: "#f7f2f0",
+    theme_color: "#1d1d1b",
     lang: "it",
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },

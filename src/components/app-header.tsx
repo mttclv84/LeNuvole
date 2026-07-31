@@ -1,15 +1,16 @@
 import { LogOut } from "lucide-react";
 import { logout } from "@/lib/actions/auth";
+import { Monogram } from "@/components/logo";
 
 export function AppHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3 sm:px-6">
-      <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Le Nuvole Casa&amp;Design
-        </p>
-        <h1 className="text-lg font-semibold">{title}</h1>
-        {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+      <div className="flex items-center gap-3">
+        <Monogram className="shrink-0" />
+        <div>
+          <h1 className="text-lg font-semibold">{title}</h1>
+          {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+        </div>
       </div>
       <form action={logout}>
         <button

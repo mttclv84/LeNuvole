@@ -1,39 +1,53 @@
 @import "tailwindcss";
 
 /*
- * Palette placeholder in attesa dei valori di brand definitivi (logo/colori)
- * da parte di Bea. Tutto centralizzato qui: per aggiornarla basta cambiare
- * queste variabili, nessun colore è scritto "a mano" nei componenti.
- * Ispirata al sito attuale (bianco dominante, tono minimal e caldo) con un
- * azzurro tenue richiamo al nome "Le Nuvole".
+ * Palette ufficiale da "Brand Manual Le Nuvole" (2026-07-31).
+ * Fonte dei valori:
+ *  - Logo (nero):        PANTONE Black 4 U · #1D1D1B
+ *  - Accent (rosso):     stimato dal campione visivo del manuale (~#FA5757),
+ *                        il PDF non riporta un HEX leggibile per questo colore
+ *                        — da correggere se si recupera il valore esatto.
+ *  - Fondi:              PANTONE 4735 U (taupe) #BDA094
+ *                        PANTONE 7604 U (rosa chiaro) #EAD7D5
+ *                        PANTONE 9345 U Pastel (bianco caldo) #F7F2F0
+ * Tutto centralizzato qui: per aggiornare la palette basta cambiare queste
+ * variabili, nessun colore è scritto "a mano" nei componenti.
  */
 :root {
-  --background: #faf9f6;
-  --foreground: #1c1b19;
+  --brand-black: #1d1d1b;
+  --brand-red: #fa5757;
+  --brand-taupe: #bda094;
+  --brand-pink: #ead7d5;
+  --brand-pastel: #f7f2f0;
+
+  --background: var(--brand-pastel);
+  --foreground: var(--brand-black);
   --card: #ffffff;
-  --card-foreground: #1c1b19;
-  --muted: #f1efe9;
-  --muted-foreground: #6f6b62;
-  --border: #e6e2d9;
-  --accent: #5b7fa6;
+  --card-foreground: var(--brand-black);
+  --muted: #f0eae6;
+  --muted-foreground: #6b6560;
+  --border: #e4dad3;
+  --accent: var(--brand-red);
   --accent-foreground: #ffffff;
   --status-green: #3fa66b;
   --status-orange: #e5a23b;
-  --status-red: #dd5c4f;
+  --status-red: var(--brand-red);
   --radius: 0.75rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #171614;
-    --foreground: #f2f0ea;
-    --card: #201f1c;
-    --card-foreground: #f2f0ea;
-    --muted: #26241f;
-    --muted-foreground: #a29c8f;
-    --border: #34312a;
-    --accent: #7fa0c4;
-    --accent-foreground: #14181d;
+    /* "Negativo": fondo nero di brand, logo/testo in bianco caldo (vedi
+       manuale, sezione "Positivo e negativo"). */
+    --background: var(--brand-black);
+    --foreground: var(--brand-pastel);
+    --card: #262523;
+    --card-foreground: var(--brand-pastel);
+    --muted: #302e2b;
+    --muted-foreground: #a39a92;
+    --border: #3a3733;
+    --accent: var(--brand-red);
+    --accent-foreground: #ffffff;
   }
 }
 
@@ -50,8 +64,13 @@
   --color-status-green: var(--status-green);
   --color-status-orange: var(--status-orange);
   --color-status-red: var(--status-red);
+  --color-brand-black: var(--brand-black);
+  --color-brand-red: var(--brand-red);
+  --color-brand-taupe: var(--brand-taupe);
+  --color-brand-pink: var(--brand-pink);
+  --color-brand-pastel: var(--brand-pastel);
   --radius-md: var(--radius);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-brand-sans);
   --font-mono: var(--font-geist-mono);
 }
 
