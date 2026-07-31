@@ -77,7 +77,18 @@ biometrico. Vedi il piano per il dettaglio.
 
 ## Deploy
 
-Pensato per [Vercel](https://vercel.com): collega il repository, imposta le
-stesse variabili d'ambiente di `.env.local` nelle impostazioni del progetto
-Vercel, deploy. Nessun'altra configurazione richiesta (Proxy/Node runtime
-supportato nativamente).
+Hosting scelto: **Render** (Web Service Node.js), backend su **Supabase**.
+Nessuna modifica al codice richiesta per Render: `src/proxy.ts` gira di
+default su runtime Node.js, compatibile con un Web Service Render standard.
+
+Passi indicativi su Render:
+
+1. New → Web Service → collega il repository GitHub.
+2. Build command: `npm install && npm run build` — Start command: `npm start`.
+3. Imposta come variabili d'ambiente le stesse tre di `.env.local`
+   (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+   `SUPABASE_SERVICE_ROLE_KEY`).
+4. Deploy.
+
+(Vercel resta comunque un'alternativa valida senza differenze di codice, nel
+caso si preferisca in futuro.)
