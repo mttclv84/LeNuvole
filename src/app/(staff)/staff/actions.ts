@@ -19,16 +19,29 @@ export async function createProject(formData: FormData) {
   await getStaffContext(); // verifica sessione/ruolo (la RLS protegge comunque l'insert)
   const supabase = await createClient();
   const client_label = str(formData, "client_label");
-  if (!client_label) return;
+  const client_id = str(formData, "client_id");
+  const contract_signed_date = str(formData, "contract_signed_date");
+  const work_start_date = str(formData, "work_start_date");
+  if (!client_label || !client_id) return;
 
   const { data, error } = await supabase
     .from("projects")
-    .insert({ client_label })
+    .insert({
+      client_label,
+      contract_signed_date: contract_signed_date || null,
+      work_start_date: work_start_date || null,
+    })
     .select("id")
     .single();
 
   if (error || !data) return;
+
+  // Il cliente selezionato passa da "registrato" a "gestito" (ora ha un
+  // cantiere abbinato e può vederlo entrando nel portale).
+  await supabase.from("profiles").update({ project_id: data.id }).eq("id", client_id);
+
   revalidatePath("/staff");
+  revalidatePath("/staff/clienti");
   redirect(`/staff/${data.id}`);
 }
 
@@ -38,10 +51,17 @@ export async function updateProjectStatus(formData: FormData) {
   const projectId = str(formData, "project_id");
   const status_light = str(formData, "status_light");
   const status_reason = str(formData, "status_reason");
+  const contract_signed_date = str(formData, "contract_signed_date");
+  const work_start_date = str(formData, "work_start_date");
 
   await supabase
     .from("projects")
-    .update({ status_light, status_reason: status_reason || null })
+    .update({
+      status_light,
+      status_reason: status_reason || null,
+      contract_signed_date: contract_signed_date || null,
+      work_start_date: work_start_date || null,
+    })
     .eq("id", projectId);
 
   revalidatePath(`/staff/${projectId}`);
@@ -54,6 +74,37 @@ export async function archiveProject(formData: FormData) {
   const projectId = str(formData, "project_id");
   await supabase.from("projects").update({ is_archived: true }).eq("id", projectId);
   revalidatePath(`/staff/${projectId}`);
+  revalidatePath("/staff");
+}
+
+export async function reactivateProject(formData: FormData) {
+  await getStaffContext();
+  const supabase = await createClient();
+  const projectId = str(formData, "project_id");
+  await supabase.from("projects").update({ is_archived: false }).eq("id", projectId);
+  revalidatePath(`/staff/${projectId}`);
+  revalidatePath("/staff");
+}
+
+// Cancellazione definitiva (solo da cantieri già disattivati): elimina il
+// progetto e, in cascata, tutti i dati collegati (budget, lavorazioni,
+// timeline, foto, documenti, pagamenti, chat, notifiche — le FK sono tutte
+// "on delete cascade"). I clienti eventualmente assegnati tornano
+// "registrati" (project_id passa a null via "on delete set null"). Best
+// effort: ripulisce anche i file caricati nello storage.
+export async function deleteProjectPermanently(formData: FormData) {
+  await getStaffContext();
+  const supabase = await createClient();
+  const projectId = str(formData, "project_id");
+
+  for (const folder of ["media", "documents", "chat"]) {
+    const { data: files } = await supabase.storage.from(BUCKET).list(`${projectId}/${folder}`);
+    if (files && files.length > 0) {
+      await supabase.storage.from(BUCKET).remove(files.map((f) => `${projectId}/${folder}/${f.name}`));
+    }
+  }
+
+  await supabase.from("projects").delete().eq("id", projectId);
   revalidatePath("/staff");
 }
 
@@ -94,7 +145,8 @@ export async function deleteBudgetItem(formData: FormData) {
 }
 
 // ---------------------------------------------------------------------------
-// Lavorazioni della settimana
+// Lavorazioni previste (alimentano anche la vista "Avanzamento", generata
+// automaticamente da queste voci ordinate per data di inizio)
 // ---------------------------------------------------------------------------
 
 export async function addWorkItem(formData: FormData) {
@@ -102,12 +154,15 @@ export async function addWorkItem(formData: FormData) {
   const supabase = await createClient();
   const project_id = str(formData, "project_id");
   const title = str(formData, "title");
-  const week_start_date = str(formData, "week_start_date");
-  const status = str(formData, "status") || "planned";
-  if (!title || !week_start_date) return;
+  const start_date = str(formData, "start_date");
+  const end_date = str(formData, "end_date");
+  if (!title || !start_date || !end_date) return;
 
-  await supabase.from("work_items").insert({ project_id, title, week_start_date, status });
+  // Nuova lavorazione: parte sempre da "Da iniziare" — lo stato si imposta
+  // dopo, dalla lista, quando serve davvero (in corso/posticipo/ecc.).
+  await supabase.from("work_items").insert({ project_id, title, start_date, end_date, status: "planned" });
   revalidatePath(`/staff/${project_id}`);
+  revalidatePath("/dashboard");
 }
 
 export async function updateWorkItemStatus(formData: FormData) {
@@ -118,6 +173,7 @@ export async function updateWorkItemStatus(formData: FormData) {
   const status = str(formData, "status");
   await supabase.from("work_items").update({ status }).eq("id", id);
   revalidatePath(`/staff/${project_id}`);
+  revalidatePath("/dashboard");
 }
 
 export async function deleteWorkItem(formData: FormData) {
@@ -127,47 +183,7 @@ export async function deleteWorkItem(formData: FormData) {
   const project_id = str(formData, "project_id");
   await supabase.from("work_items").delete().eq("id", id);
   revalidatePath(`/staff/${project_id}`);
-}
-
-// ---------------------------------------------------------------------------
-// Timeline (sostituto del Gantt)
-// ---------------------------------------------------------------------------
-
-export async function addTimelineStep(formData: FormData) {
-  await getStaffContext();
-  const supabase = await createClient();
-  const project_id = str(formData, "project_id");
-  const label = str(formData, "label");
-  if (!label) return;
-
-  const { count } = await supabase
-    .from("timeline_steps")
-    .select("id", { count: "exact", head: true })
-    .eq("project_id", project_id);
-
-  await supabase
-    .from("timeline_steps")
-    .insert({ project_id, label, order_index: (count ?? 0) + 1, status: "upcoming" });
-  revalidatePath(`/staff/${project_id}`);
-}
-
-export async function updateTimelineStepStatus(formData: FormData) {
-  await getStaffContext();
-  const supabase = await createClient();
-  const id = str(formData, "id");
-  const project_id = str(formData, "project_id");
-  const status = str(formData, "status");
-  await supabase.from("timeline_steps").update({ status }).eq("id", id);
-  revalidatePath(`/staff/${project_id}`);
-}
-
-export async function deleteTimelineStep(formData: FormData) {
-  await getStaffContext();
-  const supabase = await createClient();
-  const id = str(formData, "id");
-  const project_id = str(formData, "project_id");
-  await supabase.from("timeline_steps").delete().eq("id", id);
-  revalidatePath(`/staff/${project_id}`);
+  revalidatePath("/dashboard");
 }
 
 // ---------------------------------------------------------------------------

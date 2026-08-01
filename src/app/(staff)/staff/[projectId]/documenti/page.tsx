@@ -35,14 +35,14 @@ export default async function StaffDocumentiPage({ params }: { params: Promise<{
           <CardTitle>Carica documento</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={uploadDocument} className="flex flex-wrap items-end gap-3" encType="multipart/form-data">
+          <form action={uploadDocument} className="flex flex-wrap items-end gap-3">
             <input type="hidden" name="project_id" value={projectId} />
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="title">Titolo</Label>
               <Input id="title" name="title" required className="w-56" />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="category">Categoria</Label>
+              <Label htmlFor="category">Cartelle</Label>
               <select id="category" name="category" defaultValue="other" className="h-10 rounded-md border border-border bg-card px-3 text-sm">
                 <option value="order_confirmation">Conferma d&apos;ordine</option>
                 <option value="crew">Maestranze</option>

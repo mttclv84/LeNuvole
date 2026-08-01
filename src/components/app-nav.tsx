@@ -13,27 +13,46 @@ export interface NavLink {
   // riferimento a funzione/componente a un Client Component, solo elementi
   // React già "renderizzati" (oggetti semplici serializzabili).
   icon: ReactNode;
+  // Voce "in rilievo" (sfondo nero fisso, es. Cantieri) invece del solito
+  // sfondo rosso quando attiva.
+  emphasis?: boolean;
+  // Stacca visivamente questa voce dalle precedenti (per raggruppare le
+  // sezioni riservate al Super User, es. Utenti/Logs).
+  separatorBefore?: boolean;
 }
+
+// "/staff" (Cantieri) è prefisso letterale di rotte sorelle come
+// "/staff/clienti" o "/staff/utenti", che però sono voci di nav a sé: senza
+// questa eccezione risulterebbero entrambe "attive" insieme a Cantieri.
+const STAFF_ROOT_SIBLING_SLUGS = ["clienti", "utenti", "logs", "management-cantieri"];
 
 export function AppNav({ links }: { links: NavLink[] }) {
   const pathname = usePathname();
 
   return (
     <nav className="flex gap-1 overflow-x-auto border-b border-border bg-card px-2 sm:flex-col sm:gap-0.5 sm:overflow-visible sm:border-b-0 sm:border-r sm:p-2">
-      {links.map(({ href, label, icon }) => {
-        const active = pathname === href || (href !== "/" && pathname.startsWith(href + "/"));
+      {links.map(({ href, label, icon, emphasis, separatorBefore }) => {
+        const isStaffRootSiblingPath =
+          href === "/staff" && STAFF_ROOT_SIBLING_SLUGS.includes(pathname.split("/")[2]);
+        const active =
+          pathname === href || (href !== "/" && pathname.startsWith(href + "/") && !isStaffRootSiblingPath);
         return (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              "flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3 py-2.5 text-sm font-medium transition-colors sm:shrink",
-              active ? "bg-accent text-accent-foreground" : "text-foreground hover:bg-muted",
-            )}
-          >
-            {icon}
-            {label}
-          </Link>
+          <div key={href} className={cn(separatorBefore && "sm:mt-3 sm:border-t sm:border-border sm:pt-3")}>
+            <Link
+              href={href}
+              className={cn(
+                "flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3 py-2.5 text-sm font-medium transition-colors sm:shrink",
+                emphasis
+                  ? cn("bg-brand-black text-white hover:opacity-90", active && "ring-2 ring-inset ring-brand-red")
+                  : active
+                    ? "bg-accent text-accent-foreground"
+                    : "text-foreground hover:bg-muted",
+              )}
+            >
+              {icon}
+              {label}
+            </Link>
+          </div>
         );
       })}
     </nav>

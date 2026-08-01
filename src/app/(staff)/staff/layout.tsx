@@ -1,14 +1,22 @@
-import { Building2, Users } from "lucide-react";
+import { Building2, CalendarClock, ScrollText, UserCog, Users } from "lucide-react";
 import { AppNav, type NavLink } from "@/components/app-nav";
 import { AppHeader } from "@/components/app-header";
 import { getStaffContext } from "@/lib/data/staff-context";
+import { ROLE_LABEL } from "@/lib/types";
 
 export default async function StaffLayout({ children }: { children: React.ReactNode }) {
   const { profile } = await getStaffContext();
 
-  const links: NavLink[] = [{ href: "/staff", label: "Cantieri", icon: <Building2 className="h-4 w-4" /> }];
+  const links: NavLink[] = [
+    { href: "/staff/clienti", label: "Clienti", icon: <Users className="h-4 w-4" /> },
+    { href: "/staff", label: "Cantieri", icon: <Building2 className="h-4 w-4" />, emphasis: true },
+    { href: "/staff/management-cantieri", label: "Management Cantieri", icon: <CalendarClock className="h-4 w-4" /> },
+  ];
   if (profile.role === "owner") {
-    links.push({ href: "/staff/utenti", label: "Utenti", icon: <Users className="h-4 w-4" /> });
+    links.push(
+      { href: "/staff/utenti", label: "Utenti", icon: <UserCog className="h-4 w-4" />, separatorBefore: true },
+      { href: "/staff/logs", label: "Logs", icon: <ScrollText className="h-4 w-4" /> },
+    );
   }
 
   return (
@@ -17,7 +25,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
         <AppNav links={links} />
       </div>
       <div className="flex flex-1 flex-col">
-        <AppHeader title="Pannello Le Nuvole" subtitle={`${profile.display_name} · ${profile.role === "owner" ? "Titolare" : "Staff"}`} />
+        <AppHeader title="Pannello Le Nuvole" subtitle={`${profile.display_name} · ${ROLE_LABEL[profile.role]}`} />
         <main className="flex-1 bg-background p-4 sm:p-6">{children}</main>
       </div>
     </div>

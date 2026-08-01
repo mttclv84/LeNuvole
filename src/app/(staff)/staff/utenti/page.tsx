@@ -1,32 +1,37 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getStaffContext, requireOwner } from "@/lib/data/staff-context";
-import type { Profile, Project } from "@/lib/types";
+import { withEmails } from "@/lib/data/backfill-emails";
+import { ROLE_LABEL, type Profile } from "@/lib/types";
 import { CreateAccountForm } from "./create-account-form";
+import { EditAccountModal } from "./edit-account-modal";
 import { toggleActive } from "./actions";
 
 export default async function UtentiPage() {
   const { supabase, profile } = await getStaffContext();
   await requireOwner(profile);
 
-  const [{ data: profiles }, { data: projects }] = await Promise.all([
-    supabase.from("profiles").select("*").order("role").order("display_name"),
-    supabase.from("projects").select("*").eq("is_archived", false).order("client_label"),
-  ]);
-
-  const all = (profiles ?? []) as Profile[];
-  const staffAndOwner = all.filter((p) => p.role !== "client");
-  const clients = all.filter((p) => p.role === "client");
-  const projectLabelById = new Map(((projects ?? []) as Project[]).map((p) => [p.id, p.client_label]));
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .in("role", ["owner", "staff"])
+    .order("role")
+    .order("display_name");
+  const profiles = await withEmails((data ?? []) as Profile[]);
 
   return (
     <div className="flex flex-col gap-6">
+      <p className="text-sm text-muted-foreground">
+        Qui si registra chi può accedere al pannello Le Nuvole e con che livello di autorizzazione. Per
+        l&apos;anagrafica clienti vai su &quot;Clienti&quot;.
+      </p>
+
       <Card>
         <CardHeader>
           <CardTitle>Nuovo account</CardTitle>
         </CardHeader>
         <CardContent>
-          <CreateAccountForm projects={(projects ?? []) as Project[]} />
+          <CreateAccountForm />
         </CardContent>
       </Card>
 
@@ -35,31 +40,14 @@ export default async function UtentiPage() {
           <CardTitle>Staff Le Nuvole</CardTitle>
         </CardHeader>
         <CardContent>
-          <UserList profiles={staffAndOwner} currentProfileId={profile.id} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Clienti ({clients.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <UserList profiles={clients} currentProfileId={profile.id} projectLabelById={projectLabelById} />
+          <UserList profiles={profiles} currentProfileId={profile.id} />
         </CardContent>
       </Card>
     </div>
   );
 }
 
-function UserList({
-  profiles,
-  currentProfileId,
-  projectLabelById,
-}: {
-  profiles: Profile[];
-  currentProfileId: string;
-  projectLabelById?: Map<string, string>;
-}) {
+function UserList({ profiles, currentProfileId }: { profiles: Profile[]; currentProfileId: string }) {
   if (profiles.length === 0) {
     return <p className="text-sm text-muted-foreground">Nessun utente.</p>;
   }
@@ -73,13 +61,14 @@ function UserList({
               {p.id === currentProfileId && <span className="ml-1 text-xs text-muted-foreground">(tu)</span>}
             </p>
             <p className="text-xs text-muted-foreground">
-              {p.role === "owner" ? "Titolare" : p.role === "staff" ? "Staff" : "Cliente"}
-              {projectLabelById && p.project_id && ` · ${projectLabelById.get(p.project_id) ?? ""}`}
+              {ROLE_LABEL[p.role]}
+              {p.email && ` · ${p.email}`}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant={p.active ? "green" : "red"}>{p.active ? "Attivo" : "Disattivato"}</Badge>
-            {p.role !== "owner" && p.id !== currentProfileId && (
+            <EditAccountModal account={p} />
+            {p.id !== currentProfileId && (
               <form action={toggleActive}>
                 <input type="hidden" name="id" value={p.id} />
                 <input type="hidden" name="active" value={(!p.active).toString()} />

@@ -120,22 +120,48 @@ async function main() {
     { project_id: projectId, label: "Pavimento bagno extra", amount: 950, status: "pending" },
   ]);
 
-  const monday = new Date();
-  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-  const weekStart = monday.toISOString().slice(0, 10);
+  const dayOffset = (days: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+  };
 
   await supabase.from("work_items").upsert([
-    { project_id: projectId, title: "Impianto elettrico", week_start_date: weekStart, status: "in_progress" },
-    { project_id: projectId, title: "Impianto idraulico", week_start_date: weekStart, status: "in_progress" },
-    { project_id: projectId, title: "Conferma inizio serramenti", week_start_date: weekStart, status: "planned" },
-  ]);
-
-  await supabase.from("timeline_steps").upsert([
-    { project_id: projectId, label: "Demolizioni", order_index: 1, status: "done" },
-    { project_id: projectId, label: "Impianti", order_index: 2, status: "in_progress" },
-    { project_id: projectId, label: "Serramenti e infissi", order_index: 3, status: "upcoming" },
-    { project_id: projectId, label: "Pavimenti e rivestimenti", order_index: 4, status: "upcoming" },
-    { project_id: projectId, label: "Consegna chiavi in mano", order_index: 5, status: "upcoming" },
+    {
+      project_id: projectId,
+      title: "Demolizioni",
+      start_date: dayOffset(-21),
+      end_date: dayOffset(-15),
+      status: "done",
+    },
+    {
+      project_id: projectId,
+      title: "Impianto elettrico",
+      start_date: dayOffset(-7),
+      end_date: dayOffset(3),
+      status: "in_progress",
+    },
+    {
+      project_id: projectId,
+      title: "Impianto idraulico",
+      start_date: dayOffset(-7),
+      end_date: dayOffset(5),
+      status: "in_progress",
+    },
+    {
+      project_id: projectId,
+      title: "Conferma inizio serramenti",
+      start_date: dayOffset(10),
+      end_date: dayOffset(20),
+      status: "planned",
+    },
+    {
+      project_id: projectId,
+      title: "Pavimenti e rivestimenti",
+      start_date: dayOffset(25),
+      end_date: dayOffset(35),
+      status: "planned",
+    },
   ]);
 
   await supabase.from("messages").insert({

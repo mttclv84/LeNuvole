@@ -1,7 +1,9 @@
 import { LayoutDashboard, Image as ImageIcon, FileText, MessageCircle, Settings } from "lucide-react";
 import { AppNav, type NavLink } from "@/components/app-nav";
 import { AppHeader } from "@/components/app-header";
+import { NotificationBell } from "@/components/notification-bell";
 import { getClientContext } from "@/lib/data/client-context";
+import type { Notification } from "@/lib/types";
 
 const LINKS: NavLink[] = [
   { href: "/dashboard", label: "Il mio progetto", icon: <LayoutDashboard className="h-4 w-4" /> },
@@ -12,7 +14,14 @@ const LINKS: NavLink[] = [
 ];
 
 export default async function ClientLayout({ children }: { children: React.ReactNode }) {
-  const { project } = await getClientContext();
+  const { supabase, profile, project } = await getClientContext();
+
+  const { data: notifications } = await supabase
+    .from("notifications")
+    .select("*")
+    .eq("recipient_profile_id", profile.id)
+    .order("created_at", { ascending: false })
+    .limit(30);
 
   return (
     <div className="flex min-h-full flex-1 flex-col sm:flex-row">
@@ -20,7 +29,11 @@ export default async function ClientLayout({ children }: { children: React.React
         <AppNav links={LINKS} />
       </div>
       <div className="flex flex-1 flex-col">
-        <AppHeader title={project.client_label} subtitle="Stato del tuo progetto" />
+        <AppHeader
+          title={project.client_label}
+          subtitle="Stato del tuo progetto"
+          actions={<NotificationBell profileId={profile.id} initialNotifications={(notifications ?? []) as Notification[]} />}
+        />
         <main className="flex-1 bg-background p-4 sm:p-6">{children}</main>
       </div>
     </div>
