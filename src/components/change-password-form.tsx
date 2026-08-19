@@ -1,15 +1,33 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { changePassword, type ChangePasswordState } from "@/lib/actions/auth";
 
-export function ChangePasswordForm() {
+// redirectTo: usato dalla pagina di primo accesso (/imposta-password) per
+// portare il cliente al portale subito dopo aver scelto la password, invece
+// di lasciarlo sul semplice messaggio "Password aggiornata" (comportamento
+// di default, usato in Impostazioni per un cambio password normale).
+export function ChangePasswordForm({
+  redirectTo,
+  submitLabel = "Aggiorna password",
+}: {
+  redirectTo?: string;
+  submitLabel?: string;
+}) {
+  const router = useRouter();
   const [state, formAction, pending] = useActionState<ChangePasswordState, FormData>(
     changePassword,
     undefined,
   );
+
+  const [redirecting, setRedirecting] = useState(false);
+  if (state?.success && redirectTo && !redirecting) {
+    setRedirecting(true);
+    router.push(redirectTo);
+  }
 
   return (
     <form action={formAction} className="flex max-w-sm flex-col gap-4">
@@ -22,9 +40,11 @@ export function ChangePasswordForm() {
         <Input id="confirm" name="confirm" type="password" minLength={8} required />
       </div>
       {state?.error && <p className="text-sm text-status-red">{state.error}</p>}
-      {state?.success && <p className="text-sm text-status-green">Password aggiornata.</p>}
+      {state?.success && (
+        <p className="text-sm text-status-green">{redirectTo ? "Password impostata, ti reindirizziamo…" : "Password aggiornata."}</p>
+      )}
       <Button type="submit" disabled={pending} className="self-start">
-        {pending ? "Salvataggio…" : "Aggiorna password"}
+        {pending ? "Salvataggio…" : submitLabel}
       </Button>
     </form>
   );

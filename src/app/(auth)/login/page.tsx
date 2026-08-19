@@ -4,7 +4,7 @@ import { LoginForm } from "./login-form";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; disabled?: string }>;
+  searchParams: Promise<{ next?: string; disabled?: string; link_error?: string }>;
 }) {
   const params = await searchParams;
 
@@ -18,7 +18,7 @@ export default async function LoginPage({
             Accedi per seguire l&apos;andamento del tuo cantiere.
           </p>
         </div>
-        <LoginForm next={params.next} disabled={params.disabled === "1"} />
+        <LoginForm next={params.next} disabled={params.disabled === "1"} linkError={params.link_error === "1"} />
       </div>
     </div>
   );

@@ -41,6 +41,9 @@ export interface Project {
   is_archived: boolean;
   archived_at: string | null;
   created_at: string;
+  // Colore assegnato dallo staff, usato per distinguere i clienti nel
+  // Gantt multi-cantiere (vedi CLIENT_COLOR_PALETTE).
+  color: string;
 }
 
 export interface BudgetItem {
@@ -191,6 +194,22 @@ export function computeWorkProgress(items: Pick<WorkItem, "status">[]): {
     inProgressPercent: Math.round((inProgress / total) * 100),
   };
 }
+
+// Colori selezionabili dallo staff per un cantiere (task/scheda cliente),
+// scelti per restare distinguibili tra loro e dai colori di stato
+// (verde/arancio/rosso) usati altrove per le lavorazioni.
+export const CLIENT_COLOR_PALETTE = [
+  "#bda094", // taupe (brand, default)
+  "#4b6fa8", // blu indaco
+  "#7c9eb2", // blu polvere
+  "#8f7cb2", // viola
+  "#a85c8a", // malva
+  "#3f7a7a", // verde acqua
+  "#6b6b6b", // grigio
+  "#8a6b4b", // marrone
+  "#5b6b8a", // blu acciaio
+  "#9c7cae", // lavanda
+] as const;
 
 export const STAFF_DISPLAY_NAME = "Team Le Nuvole";
 

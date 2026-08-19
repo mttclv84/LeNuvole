@@ -1,6 +1,9 @@
 "use server";
 
+import { randomBytes } from "crypto";
+import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import QRCode from "qrcode";
 import { createClient as createSupabaseServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStaffContext } from "@/lib/data/staff-context";
@@ -9,11 +12,28 @@ function str(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
-export type CreateClientState = { error?: string; success?: boolean } | undefined;
+// Nessun servizio email collegato: l'origine viene dedotta dall'host della
+// richiesta stessa, così funziona sia in locale (http://localhost:3000) sia
+// su Render (https://lenuvole.onrender.com) senza una variabile d'ambiente
+// dedicata da tenere sincronizzata.
+async function getOrigin() {
+  const h = await headers();
+  const host = h.get("host") ?? "";
+  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https");
+  return `${proto}://${host}`;
+}
+
+export type CreateClientState =
+  | { error: string; success?: false }
+  | { success: true; qrDataUrl: string; accessLink: string; clientName: string }
+  | undefined;
 
 // Anagrafica cliente (CRM essenziale) + account di accesso al portale.
 // Aperta a tutto lo staff (non solo al Super User): è lavoro operativo
-// quotidiano, a differenza della gestione account in Utenti.
+// quotidiano, a differenza della gestione account in Utenti. Niente
+// password scelta a mano: viene generata casuale (mai comunicata) e il
+// primo accesso avviene tramite il QR (link "recovery" a uso singolo) che
+// porta il cliente a impostare da sé la propria password su /imposta-password.
 export async function createClientRecord(
   _prevState: CreateClientState,
   formData: FormData,
@@ -23,20 +43,17 @@ export async function createClientRecord(
   const first_name = str(formData, "first_name");
   const last_name = str(formData, "last_name");
   const email = str(formData, "email");
-  const password = str(formData, "password");
   const phone = str(formData, "phone");
   const address = str(formData, "address");
   const project_id = str(formData, "project_id");
   const notes = str(formData, "notes");
 
-  if (!first_name || !last_name || !email || !password) {
-    return { error: "Nome, cognome, email e password sono obbligatori." };
-  }
-  if (password.length < 8) {
-    return { error: "La password deve avere almeno 8 caratteri." };
+  if (!first_name || !last_name || !email) {
+    return { error: "Nome, cognome ed email sono obbligatori." };
   }
 
   const admin = createAdminClient();
+  const password = randomBytes(24).toString("base64url");
   const { data: created, error: createError } = await admin.auth.admin.createUser({
     email,
     password,
@@ -63,7 +80,23 @@ export async function createClientRecord(
   }
 
   revalidatePath("/staff/clienti");
-  return { success: true };
+
+  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+    type: "recovery",
+    email,
+  });
+  if (linkError || !linkData) {
+    return {
+      error:
+        "Cliente creato, ma non è stato possibile generare il QR di primo accesso. Puoi reimpostare la password dalla scheda cliente e comunicarla a mano.",
+    };
+  }
+
+  const origin = await getOrigin();
+  const accessLink = `${origin}/auth/confirm?token_hash=${linkData.properties.hashed_token}&type=recovery&next=${encodeURIComponent("/imposta-password")}`;
+  const qrDataUrl = await QRCode.toDataURL(accessLink, { width: 320, margin: 1 });
+
+  return { success: true, qrDataUrl, accessLink, clientName: `${first_name} ${last_name}`.trim() };
 }
 
 export type UpdateClientState = { error?: string; success?: boolean } | undefined;

@@ -53,6 +53,7 @@ export async function updateProjectStatus(formData: FormData) {
   const status_reason = str(formData, "status_reason");
   const contract_signed_date = str(formData, "contract_signed_date");
   const work_start_date = str(formData, "work_start_date");
+  const color = str(formData, "color");
 
   await supabase
     .from("projects")
@@ -61,6 +62,7 @@ export async function updateProjectStatus(formData: FormData) {
       status_reason: status_reason || null,
       contract_signed_date: contract_signed_date || null,
       work_start_date: work_start_date || null,
+      ...(color && { color }),
     })
     .eq("id", projectId);
 

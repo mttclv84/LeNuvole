@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { StatusLightCard } from "@/components/status-light";
 import { HouseProgress } from "@/components/house-progress";
 import { WorkTimeline } from "@/components/work-timeline";
+import { GanttChart, type GanttRow } from "@/components/gantt-chart";
 import { BudgetSummary } from "@/components/budget-summary";
 import { PaymentFormModal } from "@/components/payment-form-modal";
 import { getClientContext } from "@/lib/data/client-context";
@@ -27,6 +28,15 @@ export default async function DashboardPage() {
 
   const items = (workItems ?? []) as WorkItem[];
   const progress = computeWorkProgress(items);
+  const ganttRows: GanttRow[] = items
+    .filter((item) => item.status !== "cancelled")
+    .map((item) => ({
+      id: item.id,
+      title: item.title,
+      startDate: item.start_date,
+      endDate: item.end_date,
+      status: item.status,
+    }));
   const confirmedTotal = ((budgetItems ?? []) as BudgetItem[])
     .filter((i) => i.status === "confirmed")
     .reduce((sum, i) => sum + i.amount, 0);
@@ -60,6 +70,15 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Pianificazione lavori</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <GanttChart rows={ganttRows} labelWidth={160} emptyMessage="Nessuna lavorazione pianificata ancora." />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="flex-row items-center justify-between">

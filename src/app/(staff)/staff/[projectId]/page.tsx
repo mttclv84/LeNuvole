@@ -10,7 +10,14 @@ import { HouseProgress } from "@/components/house-progress";
 import { getStaffContext } from "@/lib/data/staff-context";
 import { getStaffProject } from "@/lib/data/staff-project";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { WORK_ITEM_STATUS_LABEL, computeWorkProgress, type BudgetItem, type Payment, type WorkItem } from "@/lib/types";
+import {
+  CLIENT_COLOR_PALETTE,
+  WORK_ITEM_STATUS_LABEL,
+  computeWorkProgress,
+  type BudgetItem,
+  type Payment,
+  type WorkItem,
+} from "@/lib/types";
 import {
   addBudgetItem,
   addWorkItem,
@@ -84,6 +91,26 @@ export default async function ProjectOverviewPage({
                 defaultValue={project.status_reason ?? ""}
                 placeholder="Es. in attesa di conferma serramenti"
               />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Colore nel Gantt</Label>
+              <div className="flex flex-wrap gap-2">
+                {CLIENT_COLOR_PALETTE.map((c) => (
+                  <label key={c} className="cursor-pointer">
+                    <input
+                      type="radio"
+                      name="color"
+                      value={c}
+                      defaultChecked={project.color === c}
+                      className="peer sr-only"
+                    />
+                    <span
+                      className="block h-7 w-7 rounded-full border-2 border-transparent peer-checked:border-foreground peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-offset-card"
+                      style={{ backgroundColor: c }}
+                    />
+                  </label>
+                ))}
+              </div>
             </div>
             <div className="flex flex-wrap gap-4">
               <div className="flex flex-col gap-1.5">

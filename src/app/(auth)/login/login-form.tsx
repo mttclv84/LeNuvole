@@ -5,7 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { login, type LoginState } from "./actions";
 
-export function LoginForm({ next, disabled }: { next?: string; disabled?: boolean }) {
+export function LoginForm({
+  next,
+  disabled,
+  linkError,
+}: {
+  next?: string;
+  disabled?: boolean;
+  linkError?: boolean;
+}) {
   const [state, formAction, pending] = useActionState<LoginState, FormData>(login, undefined);
 
   return (
@@ -15,6 +23,13 @@ export function LoginForm({ next, disabled }: { next?: string; disabled?: boolea
       {disabled && (
         <p className="rounded-md bg-status-orange/10 px-3 py-2 text-sm text-status-orange">
           Il tuo account è stato disattivato. Contatta Le Nuvole per maggiori informazioni.
+        </p>
+      )}
+
+      {linkError && (
+        <p className="rounded-md bg-status-orange/10 px-3 py-2 text-sm text-status-orange">
+          Il link non è più valido: potrebbe essere scaduto o già stato usato. Contatta Le Nuvole per riceverne uno
+          nuovo, oppure accedi qui con le tue credenziali se le conosci già.
         </p>
       )}
 
