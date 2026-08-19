@@ -45,7 +45,12 @@ export async function createProject(formData: FormData) {
   redirect(`/staff/${data.id}`);
 }
 
-export async function updateProjectStatus(formData: FormData) {
+export type UpdateProjectStatusState = { error?: string; success?: boolean } | undefined;
+
+export async function updateProjectStatus(
+  _prevState: UpdateProjectStatusState,
+  formData: FormData,
+): Promise<UpdateProjectStatusState> {
   await getStaffContext();
   const supabase = await createClient();
   const projectId = str(formData, "project_id");
@@ -55,7 +60,7 @@ export async function updateProjectStatus(formData: FormData) {
   const work_start_date = str(formData, "work_start_date");
   const color = str(formData, "color");
 
-  await supabase
+  const { error } = await supabase
     .from("projects")
     .update({
       status_light,
@@ -68,6 +73,11 @@ export async function updateProjectStatus(formData: FormData) {
 
   revalidatePath(`/staff/${projectId}`);
   revalidatePath("/staff");
+
+  if (error) {
+    return { error: "Non è stato possibile salvare le modifiche." };
+  }
+  return { success: true };
 }
 
 export async function archiveProject(formData: FormData) {

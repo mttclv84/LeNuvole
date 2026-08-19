@@ -1,23 +1,17 @@
 import { Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input, Label, Textarea } from "@/components/ui/input";
+import { Input, Label } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AutoSubmitSelect } from "@/components/auto-submit-select";
 import { ConfirmWordDialog } from "@/components/confirm-word-dialog";
 import { WorkTimeline } from "@/components/work-timeline";
 import { HouseProgress } from "@/components/house-progress";
+import { ProjectStatusForm } from "./project-status-form";
 import { getStaffContext } from "@/lib/data/staff-context";
 import { getStaffProject } from "@/lib/data/staff-project";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import {
-  CLIENT_COLOR_PALETTE,
-  WORK_ITEM_STATUS_LABEL,
-  computeWorkProgress,
-  type BudgetItem,
-  type Payment,
-  type WorkItem,
-} from "@/lib/types";
+import { WORK_ITEM_STATUS_LABEL, computeWorkProgress, type BudgetItem, type Payment, type WorkItem } from "@/lib/types";
 import {
   addBudgetItem,
   addWorkItem,
@@ -26,7 +20,6 @@ import {
   deleteWorkItem,
   reactivateProject,
   toggleBudgetItemStatus,
-  updateProjectStatus,
   updateWorkItemStatus,
 } from "../actions";
 
@@ -73,73 +66,7 @@ export default async function ProjectOverviewPage({
           <CardTitle>Stato lavori</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={updateProjectStatus} className="flex flex-col gap-3">
-            <input type="hidden" name="project_id" value={projectId} />
-            <div className="flex flex-wrap gap-4">
-              {(["green", "orange", "red"] as const).map((light) => (
-                <label key={light} className="flex items-center gap-2 text-sm">
-                  <input type="radio" name="status_light" value={light} defaultChecked={project.status_light === light} />
-                  {light === "green" ? "Verde · tutto ok" : light === "orange" ? "Arancio · in attesa" : "Rosso · fermo"}
-                </label>
-              ))}
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="status_reason">Motivo (visibile al cliente)</Label>
-              <Textarea
-                id="status_reason"
-                name="status_reason"
-                defaultValue={project.status_reason ?? ""}
-                placeholder="Es. in attesa di conferma serramenti"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>Colore nel Gantt</Label>
-              <div className="flex flex-wrap gap-2">
-                {CLIENT_COLOR_PALETTE.map((c) => (
-                  <label key={c} className="cursor-pointer">
-                    <input
-                      type="radio"
-                      name="color"
-                      value={c}
-                      defaultChecked={project.color === c}
-                      className="peer sr-only"
-                    />
-                    <span
-                      className="block h-7 w-7 rounded-full border-2 border-transparent peer-checked:border-foreground peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-offset-card"
-                      style={{ backgroundColor: c }}
-                    />
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="contract_signed_date">Data firma contratto</Label>
-                <Input
-                  id="contract_signed_date"
-                  name="contract_signed_date"
-                  type="date"
-                  defaultValue={project.contract_signed_date ?? ""}
-                  className="w-44"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="work_start_date">Data inizio lavori</Label>
-                <Input
-                  id="work_start_date"
-                  name="work_start_date"
-                  type="date"
-                  defaultValue={project.work_start_date ?? ""}
-                  className="w-44"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button type="submit" size="sm">
-                Salva
-              </Button>
-            </div>
-          </form>
+          <ProjectStatusForm project={project} projectId={projectId} />
 
           <div className="mt-4 border-t border-border pt-4">
             {!project.is_archived ? (
