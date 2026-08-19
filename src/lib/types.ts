@@ -195,20 +195,20 @@ export function computeWorkProgress(items: Pick<WorkItem, "status">[]): {
   };
 }
 
-// Colori selezionabili dallo staff per un cantiere (task/scheda cliente),
-// scelti per restare distinguibili tra loro e dai colori di stato
-// (verde/arancio/rosso) usati altrove per le lavorazioni.
+// Colori selezionabili dallo staff per un cantiere (task/scheda cliente):
+// tonalità sature/fluo, scelte per restare distinguibili a colpo d'occhio
+// tra loro anche in un Gantt affollato.
 export const CLIENT_COLOR_PALETTE = [
-  "#bda094", // taupe (brand, default)
-  "#4b6fa8", // blu indaco
-  "#7c9eb2", // blu polvere
-  "#8f7cb2", // viola
-  "#a85c8a", // malva
-  "#3f7a7a", // verde acqua
-  "#6b6b6b", // grigio
-  "#8a6b4b", // marrone
-  "#5b6b8a", // blu acciaio
-  "#9c7cae", // lavanda
+  "#FF1744", // rosso vivo
+  "#FF6D00", // arancio vivo
+  "#FFD600", // giallo fluo
+  "#39FF14", // verde fluo
+  "#00E676", // verde smeraldo
+  "#00E5FF", // ciano fluo
+  "#2979FF", // blu elettrico
+  "#7C3AED", // viola vivo
+  "#D500F9", // magenta fluo
+  "#FF3D7F", // fucsia vivo
 ] as const;
 
 export const STAFF_DISPLAY_NAME = "Team Le Nuvole";
