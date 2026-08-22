@@ -197,18 +197,19 @@ export function computeWorkProgress(items: Pick<WorkItem, "status">[]): {
 
 // Colori selezionabili dallo staff per un cantiere (task/scheda cliente):
 // tonalità sature/fluo, scelte per restare distinguibili a colpo d'occhio
-// tra loro anche in un Gantt affollato.
+// tra loro anche in un Gantt affollato. Niente giallo/verde/rosso: sono già
+// i colori del semaforo di stato (status_light) e delle lavorazioni, non
+// devono confondersi con quelli.
 export const CLIENT_COLOR_PALETTE = [
-  "#FF1744", // rosso vivo
   "#FF6D00", // arancio vivo
-  "#FFD600", // giallo fluo
-  "#39FF14", // verde fluo
-  "#00E676", // verde smeraldo
   "#00E5FF", // ciano fluo
   "#2979FF", // blu elettrico
+  "#3D5AFE", // indaco fluo
   "#7C3AED", // viola vivo
+  "#AA00FF", // viola magenta
   "#D500F9", // magenta fluo
   "#FF3D7F", // fucsia vivo
+  "#F50057", // rosa acceso
 ] as const;
 
 export const STAFF_DISPLAY_NAME = "Team Le Nuvole";
