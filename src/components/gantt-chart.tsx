@@ -169,7 +169,10 @@ export function GanttChart({
                     </Link>
                   )}
                 </div>
-                <div className="relative h-9 shrink-0" style={{ width: trackWidth }}>
+                <div
+                  className="relative h-9 shrink-0"
+                  style={{ width: trackWidth, backgroundColor: row.color ? `${row.color}26` : undefined }}
+                >
                   {/* Righe scure ai confini tra un mese e l'altro */}
                   {days.map((d, i) =>
                     d.getDate() === 1 && i > 0 ? (
