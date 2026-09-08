@@ -19,8 +19,10 @@ export default async function ClientiPage() {
   const projectList = (projects ?? []) as Project[];
   const projectLabelById = new Map(projectList.map((p) => [p.id, p.client_label]));
 
-  const registered = clients.filter((c) => !c.project_id);
-  const managed = clients.filter((c) => c.project_id);
+  const active = clients.filter((c) => c.active);
+  const registered = active.filter((c) => !c.project_id);
+  const managed = active.filter((c) => c.project_id);
+  const deactivated = clients.filter((c) => !c.active);
 
   return (
     <div className="flex flex-col gap-6">
@@ -56,6 +58,18 @@ export default async function ClientiPage() {
                 projectLabelById={projectLabelById}
                 projects={projectList}
                 emptyLabel="Nessun cliente con un cantiere abbinato ancora."
+              />
+            ),
+          },
+          {
+            key: "disattivati",
+            label: `Disattivati (${deactivated.length})`,
+            content: (
+              <ClientList
+                clients={deactivated}
+                projectLabelById={projectLabelById}
+                projects={projectList}
+                emptyLabel="Nessun cliente disattivato."
               />
             ),
           },
