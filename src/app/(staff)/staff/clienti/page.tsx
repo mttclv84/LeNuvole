@@ -26,6 +26,12 @@ export default async function ClientiPage() {
   const managed = active.filter((c) => c.project_id);
   const deactivated = clients.filter((c) => !c.active);
 
+  // Un cantiere può essere abbinato a un solo cliente: qui si escludono
+  // dal menu quelli già presi da un altro cliente (restano scelte solo per
+  // il proprio cliente attuale, vedi ClientList più sotto).
+  const assignedProjectIds = new Set(clients.filter((c) => c.project_id).map((c) => c.project_id as string));
+  const unassignedProjects = projectList.filter((p) => !assignedProjectIds.has(p.id));
+
   return (
     <div className="flex flex-col gap-6">
       <LiveRefresh
@@ -47,7 +53,7 @@ export default async function ClientiPage() {
           <CardTitle>Nuovo cliente</CardTitle>
         </CardHeader>
         <CardContent>
-          <CreateClientForm projects={projectList} />
+          <CreateClientForm projects={unassignedProjects} />
         </CardContent>
       </Card>
 
@@ -61,6 +67,7 @@ export default async function ClientiPage() {
                 clients={registered}
                 projectLabelById={projectLabelById}
                 projects={projectList}
+                assignedProjectIds={assignedProjectIds}
                 emptyLabel="Nessun cliente registrato senza cantiere."
               />
             ),
@@ -73,6 +80,7 @@ export default async function ClientiPage() {
                 clients={managed}
                 projectLabelById={projectLabelById}
                 projects={projectList}
+                assignedProjectIds={assignedProjectIds}
                 emptyLabel="Nessun cliente con un cantiere abbinato ancora."
               />
             ),
@@ -86,6 +94,7 @@ export default async function ClientiPage() {
                 clients={deactivated}
                 projectLabelById={projectLabelById}
                 projects={projectList}
+                assignedProjectIds={assignedProjectIds}
                 emptyLabel="Nessun cliente disattivato."
               />
             ),
@@ -100,11 +109,13 @@ function ClientList({
   clients,
   projectLabelById,
   projects,
+  assignedProjectIds,
   emptyLabel,
 }: {
   clients: Profile[];
   projectLabelById: Map<string, string>;
   projects: Project[];
+  assignedProjectIds: Set<string>;
   emptyLabel: string;
 }) {
   return (
@@ -135,7 +146,10 @@ function ClientList({
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <Badge variant={c.active ? "green" : "red"}>{c.active ? "Attivo" : "Disattivato"}</Badge>
-                  <EditClientModal client={c} projects={projects} />
+                  <EditClientModal
+                    client={c}
+                    projects={projects.filter((p) => p.id === c.project_id || !assignedProjectIds.has(p.id))}
+                  />
                   <form action={toggleClientActive}>
                     <input type="hidden" name="id" value={c.id} />
                     <input type="hidden" name="active" value={(!c.active).toString()} />

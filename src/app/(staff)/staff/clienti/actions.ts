@@ -53,6 +53,21 @@ export async function createClientRecord(
   }
 
   const admin = createAdminClient();
+
+  // Un cantiere può essere abbinato a un solo cliente: il menu in UI già
+  // esclude quelli presi, questo controllo copre il caso in cui un altro
+  // cliente venga assegnato a quel cantiere nel frattempo.
+  if (project_id) {
+    const { data: alreadyTaken } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("project_id", project_id)
+      .maybeSingle();
+    if (alreadyTaken) {
+      return { error: "Quel cantiere è già abbinato a un altro cliente." };
+    }
+  }
+
   const password = randomBytes(24).toString("base64url");
   const { data: created, error: createError } = await admin.auth.admin.createUser({
     email,
@@ -128,6 +143,18 @@ export async function updateClientRecord(
   }
 
   const admin = createAdminClient();
+
+  if (project_id) {
+    const { data: alreadyTaken } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("project_id", project_id)
+      .neq("id", id)
+      .maybeSingle();
+    if (alreadyTaken) {
+      return { error: "Quel cantiere è già abbinato a un altro cliente." };
+    }
+  }
 
   const authUpdate: { email?: string; password?: string; email_confirm?: boolean } = {
     email,
