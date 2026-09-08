@@ -1,4 +1,4 @@
-import { FileText, Download, CheckCircle2 } from "lucide-react";
+import { FileText, Eye, Download, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LiveRefresh } from "@/components/live-refresh";
 import { getClientContext } from "@/lib/data/client-context";
@@ -30,10 +30,17 @@ export default async function DocumentiPage() {
   const paths = items.map((d) => d.storage_path);
 
   let signedUrlByPath = new Map<string, string>();
+  let downloadUrlByPath = new Map<string, string>();
   if (paths.length > 0) {
-    const { data: signed } = await supabase.storage.from(BUCKET).createSignedUrls(paths, SIGNED_URL_TTL);
+    const [{ data: signed }, { data: signedDownload }] = await Promise.all([
+      supabase.storage.from(BUCKET).createSignedUrls(paths, SIGNED_URL_TTL),
+      supabase.storage.from(BUCKET).createSignedUrls(paths, SIGNED_URL_TTL, { download: true }),
+    ]);
     signedUrlByPath = new Map(
       (signed ?? []).filter((s) => s.signedUrl).map((s) => [s.path ?? "", s.signedUrl as string]),
+    );
+    downloadUrlByPath = new Map(
+      (signedDownload ?? []).filter((s) => s.signedUrl).map((s) => [s.path ?? "", s.signedUrl as string]),
     );
   }
 
@@ -93,16 +100,26 @@ export default async function DocumentiPage() {
                       </p>
                     </div>
                   </div>
-                  {signedUrlByPath.get(doc.storage_path) && (
-                    <a
-                      href={signedUrlByPath.get(doc.storage_path)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-accent hover:bg-muted"
-                    >
-                      <Download className="h-4 w-4" /> Apri
-                    </a>
-                  )}
+                  <div className="flex shrink-0 items-center gap-1">
+                    {signedUrlByPath.get(doc.storage_path) && (
+                      <a
+                        href={signedUrlByPath.get(doc.storage_path)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-accent hover:bg-muted"
+                      >
+                        <Eye className="h-4 w-4" /> Apri
+                      </a>
+                    )}
+                    {downloadUrlByPath.get(doc.storage_path) && (
+                      <a
+                        href={downloadUrlByPath.get(doc.storage_path)}
+                        className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-accent hover:bg-muted"
+                      >
+                        <Download className="h-4 w-4" /> Scarica
+                      </a>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
