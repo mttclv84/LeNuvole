@@ -7,6 +7,9 @@ export interface SimpleTab {
   key: string;
   label: string;
   content: ReactNode;
+  // Classi extra sul pulsante del tab — usato per es. per staccare
+  // visivamente "Disattivati" dagli altri tab (colore, margine).
+  labelClassName?: string;
 }
 
 // Tab di contenuto (non di navigazione: nessun cambio URL), usato per
@@ -18,7 +21,7 @@ export function SimpleTabs({ tabs, defaultKey }: { tabs: SimpleTab[]; defaultKey
 
   return (
     <div>
-      <div className="mb-3 flex gap-1 border-b border-border">
+      <div className="mb-3 flex flex-wrap gap-1 border-b border-border">
         {tabs.map((t) => (
           <button
             key={t.key}
@@ -29,6 +32,7 @@ export function SimpleTabs({ tabs, defaultKey }: { tabs: SimpleTab[]; defaultKey
               active === t.key
                 ? "bg-muted font-bold text-foreground"
                 : "font-medium text-muted-foreground hover:bg-muted hover:text-foreground",
+              t.labelClassName,
             )}
           >
             {t.label}

@@ -1,6 +1,8 @@
+import { Download } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SimpleTabs } from "@/components/simple-tabs";
+import { LiveRefresh } from "@/components/live-refresh";
 import { getStaffContext } from "@/lib/data/staff-context";
 import { withEmails } from "@/lib/data/backfill-emails";
 import type { Profile, Project } from "@/lib/types";
@@ -26,6 +28,20 @@ export default async function ClientiPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <LiveRefresh
+        channel="staff-clienti"
+        subscriptions={[{ table: "profiles", filter: "role=eq.client" }, { table: "projects" }]}
+      />
+      <div className="flex justify-end">
+        <a
+          href="/staff/clienti/export"
+          download
+          className="inline-flex h-8 items-center gap-2 rounded-md border border-border bg-transparent px-3 text-xs font-medium hover:bg-muted"
+        >
+          <Download className="h-3.5 w-3.5" /> Esporta Excel
+        </a>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>Nuovo cliente</CardTitle>
@@ -64,6 +80,7 @@ export default async function ClientiPage() {
           {
             key: "disattivati",
             label: `Disattivati (${deactivated.length})`,
+            labelClassName: "ml-6 sm:ml-12 text-status-red",
             content: (
               <ClientList
                 clients={deactivated}
