@@ -2,6 +2,8 @@ import { CheckCircle2, Download, FileText, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
+import { FileInput } from "@/components/ui/file-input";
+import { LiveRefresh } from "@/components/live-refresh";
 import { getStaffContext } from "@/lib/data/staff-context";
 import { formatDate } from "@/lib/utils";
 import type { DocumentItem } from "@/lib/types";
@@ -30,6 +32,10 @@ export default async function StaffDocumentiPage({ params }: { params: Promise<{
 
   return (
     <div className="flex flex-col gap-6">
+      <LiveRefresh
+        channel={`staff-documenti-${projectId}`}
+        subscriptions={[{ table: "documents", filter: `project_id=eq.${projectId}` }]}
+      />
       <Card>
         <CardHeader>
           <CardTitle>Carica documento</CardTitle>
@@ -55,7 +61,7 @@ export default async function StaffDocumentiPage({ params }: { params: Promise<{
             </label>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="file">File</Label>
-              <input id="file" name="file" type="file" required className="text-sm" />
+              <FileInput id="file" name="file" required />
             </div>
             <Button type="submit" size="sm">Carica</Button>
           </form>

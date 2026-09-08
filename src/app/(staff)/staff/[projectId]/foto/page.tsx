@@ -3,6 +3,8 @@ import { Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
+import { FileInput } from "@/components/ui/file-input";
+import { LiveRefresh } from "@/components/live-refresh";
 import { getStaffContext } from "@/lib/data/staff-context";
 import { formatDate } from "@/lib/utils";
 import type { Media, MediaType } from "@/lib/types";
@@ -33,6 +35,10 @@ export default async function StaffFotoPage({ params }: { params: Promise<{ proj
 
   return (
     <div className="flex flex-col gap-6">
+      <LiveRefresh
+        channel={`staff-foto-${projectId}`}
+        subscriptions={[{ table: "media", filter: `project_id=eq.${projectId}` }]}
+      />
       <Card>
         <CardHeader>
           <CardTitle>Carica foto, disegno o render</CardTitle>
@@ -54,7 +60,7 @@ export default async function StaffFotoPage({ params }: { params: Promise<{ proj
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="file">File</Label>
-              <input id="file" name="file" type="file" accept="image/*" required className="text-sm" />
+              <FileInput id="file" name="file" accept="image/*" required />
             </div>
             <Button type="submit" size="sm">Carica</Button>
           </form>
