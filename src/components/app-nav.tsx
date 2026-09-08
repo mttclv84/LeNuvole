@@ -19,6 +19,9 @@ export interface NavLink {
   // Stacca visivamente questa voce dalle precedenti (per raggruppare le
   // sezioni riservate al Super User, es. Utenti/Logs).
   separatorBefore?: boolean;
+  // Pallino rosso sull'icona: c'è un aggiornamento non ancora visto in
+  // questa sezione (vedi ClientAppNav, che lo calcola dalle notifiche).
+  hasUpdate?: boolean;
 }
 
 // "/staff" (Cantieri) è prefisso letterale di rotte sorelle come
@@ -31,7 +34,7 @@ export function AppNav({ links }: { links: NavLink[] }) {
 
   return (
     <nav className="flex gap-1 overflow-x-auto border-b border-border bg-card px-2 sm:flex-col sm:gap-0.5 sm:overflow-visible sm:border-b-0 sm:border-r sm:p-2">
-      {links.map(({ href, label, icon, emphasis, separatorBefore }) => {
+      {links.map(({ href, label, icon, emphasis, separatorBefore, hasUpdate }) => {
         const isStaffRootSiblingPath =
           href === "/staff" && STAFF_ROOT_SIBLING_SLUGS.includes(pathname.split("/")[2]);
         const active =
@@ -49,7 +52,12 @@ export function AppNav({ links }: { links: NavLink[] }) {
                     : "text-foreground hover:bg-muted",
               )}
             >
-              {icon}
+              <span className="relative shrink-0">
+                {icon}
+                {hasUpdate && (
+                  <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-status-red" aria-hidden />
+                )}
+              </span>
               {label}
             </Link>
           </div>

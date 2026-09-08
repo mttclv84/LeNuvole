@@ -13,7 +13,7 @@ const TYPE_ICON: Record<NotificationType, typeof Bell> = {
   document: FileText,
 };
 
-const TYPE_HREF: Record<NotificationType, string> = {
+export const TYPE_HREF: Record<NotificationType, string> = {
   message: "/chat",
   media: "/foto",
   document: "/documenti",

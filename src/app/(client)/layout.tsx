@@ -1,5 +1,6 @@
 import { LayoutDashboard, Image as ImageIcon, FileText, MessageCircle, Settings } from "lucide-react";
-import { AppNav, type NavLink } from "@/components/app-nav";
+import type { NavLink } from "@/components/app-nav";
+import { ClientAppNav } from "@/components/client-app-nav";
 import { AppHeader } from "@/components/app-header";
 import { NotificationBell } from "@/components/notification-bell";
 import { getClientContext } from "@/lib/data/client-context";
@@ -23,16 +24,18 @@ export default async function ClientLayout({ children }: { children: React.React
     .order("created_at", { ascending: false })
     .limit(30);
 
+  const notificationList = (notifications ?? []) as Notification[];
+
   return (
     <div className="flex min-h-full flex-1 flex-col sm:flex-row">
       <div className="sm:w-56 sm:shrink-0">
-        <AppNav links={LINKS} />
+        <ClientAppNav links={LINKS} profileId={profile.id} initialNotifications={notificationList} />
       </div>
       <div className="flex flex-1 flex-col">
         <AppHeader
           title={project.client_label}
           subtitle="Stato del tuo progetto"
-          actions={<NotificationBell profileId={profile.id} initialNotifications={(notifications ?? []) as Notification[]} />}
+          actions={<NotificationBell profileId={profile.id} initialNotifications={notificationList} />}
         />
         <main className="flex-1 bg-background p-4 sm:p-6">{children}</main>
       </div>
