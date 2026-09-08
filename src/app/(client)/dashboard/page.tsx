@@ -4,7 +4,8 @@ import { LiveRefresh } from "@/components/live-refresh";
 import { StatusLightCard } from "@/components/status-light";
 import { HouseProgress } from "@/components/house-progress";
 import { WorkTimeline } from "@/components/work-timeline";
-import { GanttChart, type GanttRow } from "@/components/gantt-chart";
+import type { GanttRow } from "@/components/gantt-chart";
+import { GanttPopup } from "@/components/gantt-popup";
 import { BudgetSummary } from "@/components/budget-summary";
 import { PaymentFormModal } from "@/components/payment-form-modal";
 import { getClientContext } from "@/lib/data/client-context";
@@ -86,7 +87,7 @@ export default async function DashboardPage() {
           <CardTitle>Pianificazione lavori</CardTitle>
         </CardHeader>
         <CardContent>
-          <GanttChart rows={ganttRows} labelWidth={160} emptyMessage="Nessuna lavorazione pianificata ancora." />
+          <GanttPopup rows={ganttRows} emptyMessage="Nessuna lavorazione pianificata ancora." />
         </CardContent>
       </Card>
 
