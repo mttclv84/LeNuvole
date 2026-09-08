@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getStaffContext } from "@/lib/data/staff-context";
 import { GanttChart, type GanttRow } from "@/components/gantt-chart";
+import { LiveRefresh } from "@/components/live-refresh";
 import type { Profile, Project, WorkItem } from "@/lib/types";
 
 export default async function GanttPage() {
@@ -47,6 +48,10 @@ export default async function GanttPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <LiveRefresh
+        channel="management-cantieri-gantt"
+        subscriptions={[{ table: "work_items" }, { table: "projects" }]}
+      />
       <Link
         href="/staff/management-cantieri"
         className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"

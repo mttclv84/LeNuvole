@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { StatusLightDot } from "@/components/status-light";
+import { LiveRefresh } from "@/components/live-refresh";
 import { ConfirmWordDialog } from "@/components/confirm-word-dialog";
 import { SimpleTabs } from "@/components/simple-tabs";
 import { getStaffContext } from "@/lib/data/staff-context";
@@ -30,6 +31,10 @@ export default async function StaffProjectsPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <LiveRefresh
+        channel="staff-cantieri"
+        subscriptions={[{ table: "projects" }, { table: "profiles", filter: "role=eq.client" }]}
+      />
       <Card>
         <CardHeader>
           <CardTitle>Nuovo cantiere</CardTitle>

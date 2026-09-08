@@ -7,6 +7,7 @@ import { AutoSubmitSelect } from "@/components/auto-submit-select";
 import { ConfirmWordDialog } from "@/components/confirm-word-dialog";
 import { WorkTimeline } from "@/components/work-timeline";
 import { HouseProgress } from "@/components/house-progress";
+import { LiveRefresh } from "@/components/live-refresh";
 import { ProjectStatusForm } from "./project-status-form";
 import { getStaffContext } from "@/lib/data/staff-context";
 import { getStaffProject } from "@/lib/data/staff-project";
@@ -61,6 +62,15 @@ export default async function ProjectOverviewPage({
 
   return (
     <div className="flex flex-col gap-6">
+      <LiveRefresh
+        channel={`staff-project-${projectId}`}
+        subscriptions={[
+          { table: "projects", filter: `id=eq.${projectId}` },
+          { table: "work_items", filter: `project_id=eq.${projectId}` },
+          { table: "budget_items", filter: `project_id=eq.${projectId}` },
+          { table: "payments", filter: `project_id=eq.${projectId}` },
+        ]}
+      />
       <Card>
         <CardHeader>
           <CardTitle>Stato lavori</CardTitle>

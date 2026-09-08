@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LiveRefresh } from "@/components/live-refresh";
 import { getClientContext } from "@/lib/data/client-context";
 import { formatDate } from "@/lib/utils";
 import type { Media } from "@/lib/types";
@@ -31,10 +32,15 @@ export default async function FotoPage() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Foto del cantiere</CardTitle>
-      </CardHeader>
+    <>
+      <LiveRefresh
+        channel={`foto-${project.id}`}
+        subscriptions={[{ table: "media", filter: `project_id=eq.${project.id}` }]}
+      />
+      <Card>
+        <CardHeader>
+          <CardTitle>Foto del cantiere</CardTitle>
+        </CardHeader>
       <CardContent>
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground">
@@ -61,6 +67,7 @@ export default async function FotoPage() {
           </div>
         )}
       </CardContent>
-    </Card>
+      </Card>
+    </>
   );
 }

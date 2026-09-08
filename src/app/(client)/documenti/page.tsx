@@ -1,5 +1,6 @@
 import { FileText, Download, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LiveRefresh } from "@/components/live-refresh";
 import { getClientContext } from "@/lib/data/client-context";
 import { formatDate } from "@/lib/utils";
 import type { DocumentCategory, DocumentItem } from "@/lib/types";
@@ -41,23 +42,34 @@ export default async function DocumentiPage() {
     byCategory.set(doc.category, [...(byCategory.get(doc.category) ?? []), doc]);
   }
 
+  const liveRefresh = (
+    <LiveRefresh
+      channel={`documenti-${project.id}`}
+      subscriptions={[{ table: "documents", filter: `project_id=eq.${project.id}` }]}
+    />
+  );
+
   if (items.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Documenti</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Non ci sono ancora documenti caricati. Li troverai qui non appena lo studio li pubblicherà.
-          </p>
-        </CardContent>
-      </Card>
+      <>
+        {liveRefresh}
+        <Card>
+          <CardHeader>
+            <CardTitle>Documenti</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Non ci sono ancora documenti caricati. Li troverai qui non appena lo studio li pubblicherà.
+            </p>
+          </CardContent>
+        </Card>
+      </>
     );
   }
 
   return (
     <div className="flex flex-col gap-6">
+      {liveRefresh}
       {CATEGORY_ORDER.filter((cat) => byCategory.has(cat)).map((category) => (
         <Card key={category}>
           <CardHeader>

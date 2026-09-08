@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { LiveRefresh } from "@/components/live-refresh";
 import { StatusLightCard } from "@/components/status-light";
 import { HouseProgress } from "@/components/house-progress";
 import { WorkTimeline } from "@/components/work-timeline";
@@ -44,6 +45,15 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <LiveRefresh
+        channel={`dashboard-${project.id}`}
+        subscriptions={[
+          { table: "projects", filter: `id=eq.${project.id}` },
+          { table: "work_items", filter: `project_id=eq.${project.id}` },
+          { table: "budget_items", filter: `project_id=eq.${project.id}` },
+          { table: "payments", filter: `project_id=eq.${project.id}` },
+        ]}
+      />
       <div className="grid gap-6 sm:grid-cols-[1fr_auto]">
         <StatusLightCard status={project.status_light} reason={project.status_reason} />
         <div className="flex items-center rounded-md border border-border bg-card px-5 py-4">

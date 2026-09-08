@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TrafficLight } from "@/components/traffic-light";
+import { LiveRefresh } from "@/components/live-refresh";
 import { getStaffContext } from "@/lib/data/staff-context";
 import { formatDate } from "@/lib/utils";
 import type { Profile, Project, StatusLight, WorkItem } from "@/lib/types";
@@ -35,14 +36,17 @@ export default async function ManagementCantieriPage() {
 
   if (projectIds.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Management Cantieri</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">Nessun cantiere attivo al momento.</p>
-        </CardContent>
-      </Card>
+      <>
+        <LiveRefresh channel="management-cantieri" subscriptions={[{ table: "projects" }]} />
+        <Card>
+          <CardHeader>
+            <CardTitle>Management Cantieri</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">Nessun cantiere attivo al momento.</p>
+          </CardContent>
+        </Card>
+      </>
     );
   }
 
@@ -75,6 +79,10 @@ export default async function ManagementCantieriPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <LiveRefresh
+        channel="management-cantieri"
+        subscriptions={[{ table: "work_items" }, { table: "projects" }]}
+      />
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           Scadenze di tutte le lavorazioni previste sui cantieri attivi, generata in automatico dalle date e dallo
