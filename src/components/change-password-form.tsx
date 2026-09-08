@@ -3,7 +3,8 @@
 import { useActionState, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Input, Label } from "@/components/ui/input";
+import { Label } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { changePassword, type ChangePasswordState } from "@/lib/actions/auth";
 
 // redirectTo: usato dalla pagina di primo accesso (/imposta-password) per
@@ -33,11 +34,11 @@ export function ChangePasswordForm({
     <form action={formAction} className="flex max-w-sm flex-col gap-4">
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="password">Nuova password</Label>
-        <Input id="password" name="password" type="password" minLength={8} required />
+        <PasswordInput id="password" name="password" minLength={8} required />
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="confirm">Conferma nuova password</Label>
-        <Input id="confirm" name="confirm" type="password" minLength={8} required />
+        <PasswordInput id="confirm" name="confirm" minLength={8} required />
       </div>
       {state?.error && <p className="text-sm text-status-red">{state.error}</p>}
       {state?.success && (
