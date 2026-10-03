@@ -28,3 +28,8 @@ export async function getStaffContext(): Promise<{
 export async function requireOwner(profile: Profile) {
   if (profile.role !== "owner") redirect("/staff");
 }
+
+// Per le regole di src/lib/permissions.ts: se non consentito, torna alla home staff.
+export function requireAllowed(allowed: boolean) {
+  if (!allowed) redirect("/staff");
+}

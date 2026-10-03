@@ -8,12 +8,14 @@ import { LiveRefresh } from "@/components/live-refresh";
 import { ConfirmWordDialog } from "@/components/confirm-word-dialog";
 import { SimpleTabs } from "@/components/simple-tabs";
 import { getStaffContext } from "@/lib/data/staff-context";
+import { permissions } from "@/lib/permissions";
 import { formatDate } from "@/lib/utils";
 import { STATUS_LIGHT_LABEL, type Profile, type Project } from "@/lib/types";
 import { archiveProject, createProject, deleteProjectPermanently } from "./actions";
 
 export default async function StaffProjectsPage() {
-  const { supabase } = await getStaffContext();
+  const { supabase, profile } = await getStaffContext();
+  const canDeleteForever = permissions.deleteForever(profile.role);
 
   const [{ data: projects }, { data: clients }] = await Promise.all([
     supabase.from("projects").select("*").order("created_at", { ascending: false }),
@@ -91,7 +93,7 @@ export default async function StaffProjectsPage() {
           {
             key: "disattivati",
             label: `Disattivati (${archived.length})`,
-            content: <ProjectGrid projects={archived} clientNameByProjectId={clientNameByProjectId} showDelete />,
+            content: <ProjectGrid projects={archived} clientNameByProjectId={clientNameByProjectId} showDelete={canDeleteForever} />,
           },
         ]}
       />

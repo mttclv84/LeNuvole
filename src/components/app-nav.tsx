@@ -27,7 +27,7 @@ export interface NavLink {
 // "/staff" (Cantieri) è prefisso letterale di rotte sorelle come
 // "/staff/clienti" o "/staff/utenti", che però sono voci di nav a sé: senza
 // questa eccezione risulterebbero entrambe "attive" insieme a Cantieri.
-const STAFF_ROOT_SIBLING_SLUGS = ["clienti", "utenti", "logs", "management-cantieri"];
+const STAFF_ROOT_SIBLING_SLUGS = ["clienti", "utenti", "logs", "management-cantieri", "tempi"];
 
 export function AppNav({ links }: { links: NavLink[] }) {
   const pathname = usePathname();

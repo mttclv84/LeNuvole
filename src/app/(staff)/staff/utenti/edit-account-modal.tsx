@@ -43,18 +43,6 @@ export function EditAccountModal({ account }: { account: Profile }) {
             <Input id={`email-${account.id}`} name="email" type="email" defaultValue={account.email ?? ""} required />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor={`role-${account.id}`}>Livello</Label>
-            <select
-              id={`role-${account.id}`}
-              name="role"
-              defaultValue={account.role}
-              className="h-10 rounded-md border border-border bg-card px-3 text-sm"
-            >
-              <option value="staff">Staff</option>
-              <option value="owner">Super User</option>
-            </select>
-          </div>
-          <div className="flex flex-col gap-1.5">
             <Label>Password</Label>
             {showPasswordField ? (
               <Input

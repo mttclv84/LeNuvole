@@ -3,36 +3,43 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getStaffContext, requireOwner } from "@/lib/data/staff-context";
+import { getStaffContext, requireAllowed } from "@/lib/data/staff-context";
+import { permissions } from "@/lib/permissions";
+import type { UserRole } from "@/lib/types";
 
 function str(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
+type Admin = ReturnType<typeof createAdminClient>;
+
+// Il livello dell'account bersaglio si legge dal database, mai dal form: il form si può manomettere.
+async function getTargetRole(admin: Admin, id: string): Promise<UserRole | null> {
+  const { data } = await admin.from("profiles").select("role").eq("id", id).maybeSingle();
+  return (data?.role as UserRole | undefined) ?? null;
+}
+
 export type CreateAccountState = { error?: string; success?: boolean } | undefined;
 
-// Solo il Super User crea account per il pannello (Staff o altro Super
-// User). L'anagrafica clienti è una cosa separata, vedi staff/clienti/actions.ts.
+// Solo il Super User crea account per il pannello, sempre di livello Staff
+// (il Super User è uno solo). L'anagrafica clienti è una cosa separata, vedi
+// staff/clienti/actions.ts.
 export async function createAccount(
   _prevState: CreateAccountState,
   formData: FormData,
 ): Promise<CreateAccountState> {
   const { profile } = await getStaffContext();
-  await requireOwner(profile);
+  requireAllowed(permissions.accessUsersPage(profile.role));
 
   const email = str(formData, "email");
   const password = str(formData, "password");
   const display_name = str(formData, "display_name");
-  const role = str(formData, "role") as "staff" | "owner";
 
   if (!email || !password || !display_name) {
     return { error: "Compila tutti i campi." };
   }
   if (password.length < 8) {
     return { error: "La password deve avere almeno 8 caratteri." };
-  }
-  if (role !== "staff" && role !== "owner") {
-    return { error: "Seleziona un livello valido." };
   }
 
   const admin = createAdminClient();
@@ -47,7 +54,7 @@ export async function createAccount(
 
   const { error: profileError } = await admin.from("profiles").insert({
     id: created.user.id,
-    role,
+    role: "staff",
     display_name,
     email,
   });
@@ -61,34 +68,34 @@ export async function createAccount(
 
 export type UpdateAccountState = { error?: string; success?: boolean } | undefined;
 
-// Il Super User può correggere nome, email e livello di qualsiasi account,
-// inclusi altri Super User. La password NON è mai leggibile (è salvata
-// cifrata, irreversibile per chiunque): qui si può solo impostarne una
-// nuova, non vedere/confermare quella esistente.
+// Il Super User corregge nome ed email degli account. Il livello non si
+// cambia da qui. La password NON è mai leggibile (è salvata cifrata,
+// irreversibile per chiunque): qui si può solo impostarne una nuova, non
+// vedere/confermare quella esistente.
 export async function updateAccount(
   _prevState: UpdateAccountState,
   formData: FormData,
 ): Promise<UpdateAccountState> {
   const { profile } = await getStaffContext();
-  await requireOwner(profile);
+  requireAllowed(permissions.accessUsersPage(profile.role));
 
   const id = str(formData, "id");
   const display_name = str(formData, "display_name");
-  const role = str(formData, "role") as "staff" | "owner";
   const email = str(formData, "email");
   const new_password = str(formData, "new_password");
 
   if (!display_name || !email) {
     return { error: "Nome visualizzato ed email sono obbligatori." };
   }
-  if (role !== "staff" && role !== "owner") {
-    return { error: "Seleziona un livello valido." };
-  }
   if (new_password && new_password.length < 8) {
     return { error: "La nuova password deve avere almeno 8 caratteri." };
   }
 
   const admin = createAdminClient();
+  const targetRole = await getTargetRole(admin, id);
+  if (!targetRole || !permissions.canManageAccount(profile.role, targetRole)) {
+    return { error: "Non hai i permessi per modificare questo account." };
+  }
 
   const authUpdate: { email?: string; password?: string; email_confirm?: boolean } = {
     email,
@@ -101,7 +108,7 @@ export async function updateAccount(
     return { error: "Impossibile aggiornare le credenziali di accesso (email già in uso?)." };
   }
 
-  const { error } = await admin.from("profiles").update({ display_name, role, email }).eq("id", id);
+  const { error } = await admin.from("profiles").update({ display_name, email }).eq("id", id);
   if (error) {
     return { error: "Non è stato possibile salvare le modifiche." };
   }
@@ -112,15 +119,35 @@ export async function updateAccount(
 
 export async function toggleActive(formData: FormData) {
   const { profile } = await getStaffContext();
-  await requireOwner(profile);
+  requireAllowed(permissions.accessUsersPage(profile.role));
 
   const supabase = await createClient();
   const id = str(formData, "id");
   const active = str(formData, "active") === "true";
 
-  // L'owner non può bloccare se stesso.
+  // Nessuno può bloccare se stesso.
   if (id === profile.id) return;
 
   await supabase.from("profiles").update({ active }).eq("id", id);
+  revalidatePath("/staff/utenti");
+}
+
+// Eliminazione definitiva di un account Staff. Non reversibile: con l'account
+// spariscono anche i suoi tempi registrati e i messaggi che ha scritto nelle
+// chat dei cantieri (le relazioni sul database sono "on delete cascade").
+// Per un collega vero è quasi sempre meglio "Disattiva". Mai su se stessi,
+// sul Super User o sui clienti (quelli si gestiscono da "Clienti").
+export async function deleteAccount(formData: FormData) {
+  const { profile } = await getStaffContext();
+  requireAllowed(permissions.deleteForever(profile.role));
+
+  const id = str(formData, "id");
+  if (id === profile.id) return;
+
+  const admin = createAdminClient();
+  const targetRole = await getTargetRole(admin, id);
+  if (targetRole !== "staff") return;
+
+  await admin.auth.admin.deleteUser(id);
   revalidatePath("/staff/utenti");
 }

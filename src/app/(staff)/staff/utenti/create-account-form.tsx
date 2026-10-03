@@ -25,15 +25,7 @@ export function CreateAccountForm() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-end gap-4">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="role">Livello</Label>
-          <select id="role" name="role" defaultValue="staff" className="h-10 rounded-md border border-border bg-card px-3 text-sm">
-            <option value="staff">Staff</option>
-            <option value="owner">Super User</option>
-          </select>
-        </div>
-
+      <div>
         <Button type="submit" disabled={pending}>
           {pending ? "Creazione…" : "Crea account"}
         </Button>

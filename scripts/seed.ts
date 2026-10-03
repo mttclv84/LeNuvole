@@ -12,6 +12,7 @@
 //
 // Lo script è idempotente sulle email: se un utente esiste già viene riusato.
 
+import { randomBytes } from "node:crypto";
 import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 
@@ -20,12 +21,28 @@ config({ path: ".env.local" });
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+// Il seed crea account e dati DEMO: su un database reale non deve girare per
+// sbaglio (ricreerebbe gli account demo appena eliminati). Per usarlo di
+// proposito su un database di prova: ALLOW_DEMO_SEED=1.
+if (process.env.ALLOW_DEMO_SEED !== "1") {
+  console.error(
+    "Seed demo non eseguito: crea account e dati di PROVA. Per lanciarlo davvero su un database di prova: " +
+      "ALLOW_DEMO_SEED=1 npm run seed   (PowerShell: $env:ALLOW_DEMO_SEED=1; npm run seed)",
+  );
+  process.exit(1);
+}
+
 if (!url || !serviceRoleKey) {
   console.error(
     "Mancano NEXT_PUBLIC_SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY in .env.local",
   );
   process.exit(1);
 }
+
+// Nessuna password nel codice (il repository è pubblico): se non la passi tu
+// con SEED_PASSWORD, ne viene generata una casuale e stampata UNA volta a fine
+// esecuzione. Valida solo per gli account creati da questo script.
+const seedPassword = process.env.SEED_PASSWORD ?? randomBytes(18).toString("base64url");
 
 const supabase = createClient(url, serviceRoleKey, {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -69,9 +86,9 @@ async function upsertProfile(profile: {
 async function main() {
   console.log("Creazione utenti demo...");
 
-  const owner = await ensureUser("bea@lenuvolecasaedesign.it", "CambiaSubito!2026");
-  const staff = await ensureUser("staff.demo@lenuvolecasaedesign.it", "CambiaSubito!2026");
-  const client = await ensureUser("cliente.demo@lenuvolecasaedesign.it", "CambiaSubito!2026");
+  const owner = await ensureUser("bea@lenuvolecasaedesign.it", seedPassword);
+  const staff = await ensureUser("staff.demo@lenuvolecasaedesign.it", seedPassword);
+  const client = await ensureUser("cliente.demo@lenuvolecasaedesign.it", seedPassword);
 
   if (!owner || !staff || !client) throw new Error("Creazione utenti fallita");
 
@@ -171,10 +188,12 @@ async function main() {
     body: "Benvenuti nel vostro portale! Da qui potete seguire l'avanzamento del cantiere in ogni momento.",
   });
 
-  console.log("\nFatto! Credenziali demo (cambiare la password al primo accesso):");
-  console.log("  Owner  -> bea@lenuvolecasaedesign.it / CambiaSubito!2026");
-  console.log("  Staff  -> staff.demo@lenuvolecasaedesign.it / CambiaSubito!2026");
-  console.log("  Cliente-> cliente.demo@lenuvolecasaedesign.it / CambiaSubito!2026");
+  console.log("\nFatto! Account demo (se esistevano già, la loro password NON è stata toccata):");
+  console.log("  Owner  -> bea@lenuvolecasaedesign.it");
+  console.log("  Staff  -> staff.demo@lenuvolecasaedesign.it");
+  console.log("  Cliente-> cliente.demo@lenuvolecasaedesign.it");
+  console.log(`  Password (solo per gli account appena creati): ${seedPassword}`);
+  console.log("  Cambiala al primo accesso e non usare questi account in produzione.");
 }
 
 main().catch((err) => {

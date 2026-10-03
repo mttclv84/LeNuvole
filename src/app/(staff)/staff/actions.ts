@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getStaffContext } from "@/lib/data/staff-context";
+import { permissions } from "@/lib/permissions";
 
 const BUCKET = "project-files";
 
@@ -105,7 +106,9 @@ export async function reactivateProject(formData: FormData) {
 // "registrati" (project_id passa a null via "on delete set null"). Best
 // effort: ripulisce anche i file caricati nello storage.
 export async function deleteProjectPermanently(formData: FormData) {
-  await getStaffContext();
+  const { profile } = await getStaffContext();
+  // Operazione non reversibile: solo chi ha il permesso (Admin principale).
+  if (!permissions.deleteForever(profile.role)) return;
   const supabase = await createClient();
   const projectId = str(formData, "project_id");
 

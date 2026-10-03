@@ -1,15 +1,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getStaffContext, requireOwner } from "@/lib/data/staff-context";
+import { ConfirmWordDialog } from "@/components/confirm-word-dialog";
+import { getStaffContext, requireAllowed } from "@/lib/data/staff-context";
 import { withEmails } from "@/lib/data/backfill-emails";
+import { permissions } from "@/lib/permissions";
 import { ROLE_LABEL, type Profile } from "@/lib/types";
 import { CreateAccountForm } from "./create-account-form";
 import { EditAccountModal } from "./edit-account-modal";
-import { toggleActive } from "./actions";
+import { deleteAccount, toggleActive } from "./actions";
 
 export default async function UtentiPage() {
   const { supabase, profile } = await getStaffContext();
-  await requireOwner(profile);
+  requireAllowed(permissions.accessUsersPage(profile.role));
 
   const { data } = await supabase
     .from("profiles")
@@ -22,13 +24,13 @@ export default async function UtentiPage() {
   return (
     <div className="flex flex-col gap-6">
       <p className="text-sm text-muted-foreground">
-        Qui si registra chi può accedere al pannello Le Nuvole e con che livello di autorizzazione. Per
-        l&apos;anagrafica clienti vai su &quot;Clienti&quot;.
+        Qui si registra chi può accedere al pannello Le Nuvole. Per l&apos;anagrafica clienti vai su
+        &quot;Clienti&quot;.
       </p>
 
       <Card>
         <CardHeader>
-          <CardTitle>Nuovo account</CardTitle>
+          <CardTitle>Nuovo account Staff</CardTitle>
         </CardHeader>
         <CardContent>
           <CreateAccountForm />
@@ -53,33 +55,47 @@ function UserList({ profiles, currentProfileId }: { profiles: Profile[]; current
   }
   return (
     <ul className="flex flex-col divide-y divide-border">
-      {profiles.map((p) => (
-        <li key={p.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
-          <div>
-            <p className="text-sm font-medium">
-              {p.display_name}
-              {p.id === currentProfileId && <span className="ml-1 text-xs text-muted-foreground">(tu)</span>}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {ROLE_LABEL[p.role]}
-              {p.email && ` · ${p.email}`}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={p.active ? "green" : "red"}>{p.active ? "Attivo" : "Disattivato"}</Badge>
-            <EditAccountModal account={p} />
-            {p.id !== currentProfileId && (
-              <form action={toggleActive}>
-                <input type="hidden" name="id" value={p.id} />
-                <input type="hidden" name="active" value={(!p.active).toString()} />
-                <button type="submit" className="rounded-md border border-border px-2.5 py-1 text-xs hover:bg-muted">
-                  {p.active ? "Disattiva" : "Riattiva"}
-                </button>
-              </form>
-            )}
-          </div>
-        </li>
-      ))}
+      {profiles.map((p) => {
+        const isMe = p.id === currentProfileId;
+        return (
+          <li key={p.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+            <div>
+              <p className="text-sm font-medium">
+                {p.display_name}
+                {isMe && <span className="ml-1 text-xs text-muted-foreground">(tu)</span>}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {ROLE_LABEL[p.role]}
+                {p.email && ` · ${p.email}`}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant={p.active ? "green" : "red"}>{p.active ? "Attivo" : "Disattivato"}</Badge>
+              <EditAccountModal account={p} />
+              {!isMe && (
+                <form action={toggleActive}>
+                  <input type="hidden" name="id" value={p.id} />
+                  <input type="hidden" name="active" value={(!p.active).toString()} />
+                  <button type="submit" className="rounded-md border border-border px-2.5 py-1 text-xs hover:bg-muted">
+                    {p.active ? "Disattiva" : "Riattiva"}
+                  </button>
+                </form>
+              )}
+              {!isMe && p.role === "staff" && (
+                <ConfirmWordDialog
+                  triggerLabel="Elimina"
+                  triggerClassName="rounded-md border border-status-red px-2.5 py-1 text-xs text-status-red hover:bg-status-red/10"
+                  title="Elimina account"
+                  description={`L'account di ${p.display_name} verrà eliminato per sempre, insieme ai suoi tempi registrati e ai messaggi scritti nelle chat dei cantieri. Per un collega che non usa più il portale è meglio "Disattiva".`}
+                  word="ELIMINA"
+                  action={deleteAccount}
+                  hiddenFields={{ id: p.id }}
+                />
+              )}
+            </div>
+          </li>
+        );
+      })}
     </ul>
   );
 }

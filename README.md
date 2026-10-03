@@ -20,6 +20,10 @@ Next.js 16 (App Router) + TypeScript + Tailwind CSS v4, backend Supabase
    - `supabase/migrations/0001_init.sql` (tabelle + Row Level Security)
    - `supabase/migrations/0002_storage.sql` (bucket file + policy)
    - `supabase/migrations/0003_realtime.sql` (chat in tempo reale)
+   - poi tutte le successive (`0004` … `0011`) in ordine numerico, ciascuna come
+     esecuzione separata. La `0010` aggiunge la gestione tempi clienti (sezione
+     "Tempi" del pannello staff), la `0011` l'elenco delle persone tra cui si
+     sceglie nel menu quando si registra il tempo (Mattia, Federica, Lesly).
 
 ## 2. Installare ed eseguire in locale
 
@@ -30,17 +34,37 @@ npm run dev
 
 App su [http://localhost:3000](http://localhost:3000) — reindirizza a `/login`.
 
-## 3. Popolare dati demo (opzionale ma consigliato)
+## 3. Account veri
 
-Crea un cantiere fittizio "CASA BIZZOTTO" con 3 utenti demo (owner, staff,
-cliente), utile per la revisione visiva prima di collegare dati reali:
+Gli accessi reali sono tre: **info@lenuvolecasaedesign.it** (Super User, accesso
+totale: Logs, eliminazioni, correzione dei record di tutti) e
+**commerciale@** / **interior@lenuvolecasaedesign.it** (Staff). Si creano con:
 
 ```bash
-npm run seed
+npm run setup:accounts
 ```
 
-Le credenziali stampate a console vanno cambiate al primo accesso (sezione
-Impostazioni per il cliente, l'owner può gestire lo staff da "Utenti").
+Lo script stampa per ogni account nuovo un link di primo accesso (uso singolo,
+scade presto) con cui la persona sceglie la propria password: nessuna password
+viaggia in chiaro. `--links` ne rigenera di nuovi per gli account già esistenti.
+
+Dopo il primo accesso del Super User, per eliminare gli eventuali account demo:
+
+```bash
+npm run setup:accounts -- --delete-demo          # simulazione, mostra cosa verrebbe eliminato
+npm run setup:accounts -- --delete-demo --yes    # elimina davvero
+```
+
+Lo script elimina solo se il Super User esiste ed è attivo. Il cantiere demo
+"CASA BIZZOTTO", se presente, va eliminato a mano dal pannello.
+
+### Dati demo (solo database di prova)
+
+`npm run seed` crea un cantiere fittizio "CASA BIZZOTTO" con 3 utenti demo, utile
+per la revisione visiva. Su un database reale **non va usato**: per questo si rifiuta
+di partire se non si imposta `ALLOW_DEMO_SEED=1`. La password degli account demo è
+casuale e viene stampata una sola volta a fine esecuzione (oppure la imposti tu con
+`SEED_PASSWORD`).
 
 ## Struttura
 
@@ -49,7 +73,9 @@ Impostazioni per il cliente, l'owner può gestire lo staff da "Utenti").
   impostazioni. Sola consultazione tranne la chat.
 - `src/app/(staff)/staff/*` — pannello staff: elenco cantieri, dettaglio
   cantiere (stato, budget, lavorazioni, timeline), foto, documenti, chat;
-  `staff/utenti` è riservato all'owner (creazione account, blocco staff).
+  `staff/utenti` è riservato al Super User (creazione, blocco ed eliminazione
+  degli account staff); `staff/tempi` è la gestione tempi clienti; i permessi
+  stanno tutti in `src/lib/permissions.ts`.
 - `src/proxy.ts` + `src/lib/supabase/proxy.ts` — rinfresca la sessione e
   instrada ogni richiesta in base al ruolo (cliente / staff / owner) e allo
   stato dell'account.

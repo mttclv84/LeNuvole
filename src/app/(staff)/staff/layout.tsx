@@ -1,7 +1,8 @@
-import { Building2, CalendarClock, ScrollText, UserCog, Users } from "lucide-react";
+import { Building2, CalendarClock, ScrollText, Timer, UserCog, Users } from "lucide-react";
 import { AppNav, type NavLink } from "@/components/app-nav";
 import { AppHeader } from "@/components/app-header";
 import { getStaffContext } from "@/lib/data/staff-context";
+import { permissions } from "@/lib/permissions";
 import { ROLE_LABEL } from "@/lib/types";
 
 export default async function StaffLayout({ children }: { children: React.ReactNode }) {
@@ -11,12 +12,19 @@ export default async function StaffLayout({ children }: { children: React.ReactN
     { href: "/staff/clienti", label: "Clienti", icon: <Users className="h-4 w-4" /> },
     { href: "/staff", label: "Cantieri", icon: <Building2 className="h-4 w-4" />, emphasis: true },
     { href: "/staff/management-cantieri", label: "Management Cantieri", icon: <CalendarClock className="h-4 w-4" /> },
+    { href: "/staff/tempi", label: "Tempi", icon: <Timer className="h-4 w-4" /> },
   ];
-  if (profile.role === "owner") {
-    links.push(
-      { href: "/staff/utenti", label: "Utenti", icon: <UserCog className="h-4 w-4" />, separatorBefore: true },
-      { href: "/staff/logs", label: "Logs", icon: <ScrollText className="h-4 w-4" /> },
-    );
+  const canSeeUsers = permissions.accessUsersPage(profile.role);
+  if (canSeeUsers) {
+    links.push({ href: "/staff/utenti", label: "Utenti", icon: <UserCog className="h-4 w-4" />, separatorBefore: true });
+  }
+  if (permissions.viewLogs(profile.role)) {
+    links.push({
+      href: "/staff/logs",
+      label: "Logs",
+      icon: <ScrollText className="h-4 w-4" />,
+      separatorBefore: !canSeeUsers,
+    });
   }
 
   return (

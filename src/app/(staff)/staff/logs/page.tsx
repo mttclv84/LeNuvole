@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getStaffContext, requireOwner } from "@/lib/data/staff-context";
+import { getStaffContext, requireAllowed } from "@/lib/data/staff-context";
+import { permissions } from "@/lib/permissions";
 import { formatDateTime } from "@/lib/utils";
 import type { AuditLogEntry } from "@/lib/types";
 
@@ -13,6 +14,8 @@ const TABLE_LABEL: Record<string, string> = {
   documents: "Documento",
   payments: "Pagamento",
   profiles: "Utente/Cliente",
+  time_jobs: "Commessa tempi",
+  time_entries: "Voce di tempo",
 };
 
 const OPERATION_LABEL = { insert: "Creato", update: "Modificato", delete: "Eliminato" } as const;
@@ -20,7 +23,7 @@ const OPERATION_VARIANT = { insert: "green", update: "accent", delete: "red" } a
 
 export default async function LogsPage() {
   const { supabase, profile } = await getStaffContext();
-  await requireOwner(profile);
+  requireAllowed(permissions.viewLogs(profile.role));
 
   const { data: entries } = await supabase
     .from("audit_log")

@@ -216,8 +216,67 @@ export const STAFF_DISPLAY_NAME = "Team Le Nuvole";
 
 // "owner" resta il valore a database (RLS, funzioni is_owner/is_staff): qui
 // si rinomina solo l'etichetta mostrata in interfaccia.
+// owner = Super User (accesso totale, uno solo); staff = lavoro operativo.
+// (vedi src/lib/permissions.ts).
 export const ROLE_LABEL: Record<UserRole, string> = {
   owner: "Super User",
   staff: "Staff",
   client: "Cliente",
 };
+
+// ---------------------------------------------------------------------------
+// Gestione tempi clienti (vedi supabase/migrations/0010_time_tracking.sql)
+// ---------------------------------------------------------------------------
+
+export type TimeArea = "design" | "quoting" | "site";
+export type TimeEntrySource = "timer" | "manual";
+
+export const TIME_AREAS: TimeArea[] = ["design", "quoting", "site"];
+
+export const TIME_AREA_LABEL: Record<TimeArea, string> = {
+  design: "Progetto",
+  quoting: "Preventivazione",
+  site: "Cantiere",
+};
+
+export interface TimeJob {
+  id: string;
+  client_name: string;
+  title: string;
+  opened_on: string;
+  notes: string | null;
+  est_design_h: number;
+  est_quoting_h: number;
+  est_site_h: number;
+  project_id: string | null;
+  is_closed: boolean;
+  created_by: string | null;
+  created_at: string;
+}
+
+// Persona a cui si attribuisce il tempo (Mattia, Federica, Lesly...). Non è
+// un account di accesso: gli accessi sono condivisi e la persona si sceglie dal menu.
+export interface TimePerson {
+  id: string;
+  name: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface TimeEntry {
+  id: string;
+  job_id: string;
+  // A chi è attribuito il tempo.
+  person_id: string;
+  // L'account con cui la voce è stata inserita (null se poi eliminato).
+  recorded_by: string | null;
+  area: TimeArea;
+  started_at: string;
+  // null finché il timer è in corso.
+  ended_at: string | null;
+  minutes: number | null;
+  note: string | null;
+  source: TimeEntrySource;
+  created_at: string;
+}
