@@ -1,7 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LiveRefresh } from "@/components/live-refresh";
+import { FuelGauge } from "@/components/fuel-gauge";
 import { getStaffContext } from "@/lib/data/staff-context";
 import { getStaffProject } from "@/lib/data/staff-project";
+import { closeStaleTimers } from "@/lib/data/time-tracking";
 import { permissions } from "@/lib/permissions";
 import { formatMinutes, sumByArea, summarizeProject } from "@/lib/time-tracking";
 import { formatDateTime } from "@/lib/utils";
@@ -13,6 +15,7 @@ export default async function ProjectTimingPage({ params }: { params: Promise<{ 
   const { projectId } = await params;
   const { supabase, profile } = await getStaffContext();
   await getStaffProject(supabase, projectId);
+  await closeStaleTimers(supabase);
 
   const [{ data: timingData }, { data: entries }] = await Promise.all([
     supabase.from("project_timing").select("*").eq("project_id", projectId).maybeSingle(),
@@ -59,6 +62,14 @@ export default async function ProjectTimingPage({ params }: { params: Promise<{ 
           <CardTitle>Ore utilizzate finora</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="mb-6 flex flex-col items-center gap-6">
+            <FuelGauge summary={summary.total} label="Totale" size="lg" />
+            <div className="grid w-full grid-cols-1 justify-items-center gap-6 sm:grid-cols-3">
+              {TIME_AREAS.map((a) => (
+                <FuelGauge key={a} summary={summary.areas[a]} label={TIME_AREA_LABEL[a]} size="sm" />
+              ))}
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[26rem] text-sm">
               <thead>

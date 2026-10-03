@@ -3,9 +3,9 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { getStaffContext, requireAllowed } from "@/lib/data/staff-context";
-import { TIME_PERSON_COOKIE } from "@/lib/data/time-tracking";
+import { TIME_PERSON_COOKIE, closeStaleTimers } from "@/lib/data/time-tracking";
 import { permissions } from "@/lib/permissions";
-import { todayInRome } from "@/lib/time-tracking";
+import { TIMER_MAX_MINUTES, todayInRome } from "@/lib/time-tracking";
 import { TIME_AREAS, type TimeArea } from "@/lib/types";
 
 type Supabase = Awaited<ReturnType<typeof getStaffContext>>["supabase"];
@@ -116,6 +116,9 @@ export async function startTimer(_prev: TimeFormState, formData: FormData): Prom
   const sel = await readSelection(supabase, formData);
   if ("error" in sel) return sel;
 
+  // Un timer dimenticato da più di 8 ore non deve bloccare il nuovo avvio.
+  await closeStaleTimers(supabase);
+
   const { error } = await supabase.from("time_entries").insert({
     project_id: sel.projectId,
     person_id: sel.personId,
@@ -149,14 +152,15 @@ export async function stopTimer(_prev: TimeFormState, formData: FormData): Promi
 
   if (!running) return { error: "Questo timer non è più attivo." };
 
-  const now = new Date();
-  const elapsedMs = now.getTime() - new Date(running.started_at).getTime();
+  const startedMs = new Date(running.started_at).getTime();
+  // Mai oltre le 8 ore: oltre quel limite il timer si è già fermato da solo.
+  const endedMs = Math.min(Date.now(), startedMs + TIMER_MAX_MINUTES * 60000);
   // Almeno 1 minuto: un timer fermato subito non deve sparire dal registro.
-  const minutes = Math.max(1, Math.round(elapsedMs / 60000));
+  const minutes = Math.max(1, Math.round((endedMs - startedMs) / 60000));
 
   const { error } = await supabase
     .from("time_entries")
-    .update({ ended_at: now.toISOString(), minutes, note: str(formData, "note") || null })
+    .update({ ended_at: new Date(endedMs).toISOString(), minutes, note: str(formData, "note") || null })
     .eq("id", running.id)
     .is("ended_at", null);
 

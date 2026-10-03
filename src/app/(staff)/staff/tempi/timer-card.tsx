@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState, useSyncExternalStore } from "react";
+import { useActionState, useEffect, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
 import { Square } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
-import { formatClock } from "@/lib/time-tracking";
+import { TIMER_MAX_MINUTES, formatClock } from "@/lib/time-tracking";
 import { TIME_AREA_LABEL, type TimeArea } from "@/lib/types";
 import { stopTimer, type TimeFormState } from "./actions";
 
@@ -44,6 +45,15 @@ function RunningPanel({ running }: { running: RunningTimerView }) {
   const [state, formAction, pending] = useActionState<TimeFormState, FormData>(stopTimer, undefined);
   const nowSeconds = useSyncExternalStore(subscribeToClock, getNowSeconds, getServerNowSeconds);
   const startedSeconds = Math.floor(new Date(running.startedAt).getTime() / 1000);
+  const elapsed = nowSeconds === 0 ? 0 : nowSeconds - startedSeconds;
+  const limitReached = elapsed >= TIMER_MAX_MINUTES * 60;
+
+  // Allo scoccare delle 8 ore il server chiude il timer: si ricarica la pagina
+  // per mostrarlo fermato (il server lo chiude a 8 ore esatte).
+  const router = useRouter();
+  useEffect(() => {
+    if (limitReached) router.refresh();
+  }, [limitReached, router]);
 
   return (
     <Card className="border-accent">
@@ -60,7 +70,10 @@ function RunningPanel({ running }: { running: RunningTimerView }) {
           </div>
 
           <p className="text-center font-mono text-5xl font-semibold tabular-nums" aria-live="off">
-            {nowSeconds === 0 ? "--:--:--" : formatClock(nowSeconds - startedSeconds)}
+            {nowSeconds === 0 ? "--:--:--" : formatClock(Math.min(elapsed, TIMER_MAX_MINUTES * 60))}
+          </p>
+          <p className="-mt-2 text-center text-xs text-muted-foreground">
+            {limitReached ? "Raggiunte 8 ore: il timer si è fermato da solo." : "Si ferma da solo dopo 8 ore di seguito."}
           </p>
 
           <div className="flex flex-col gap-1.5">

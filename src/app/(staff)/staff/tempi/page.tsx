@@ -7,28 +7,56 @@ import { Button } from "@/components/ui/button";
 import { LiveRefresh } from "@/components/live-refresh";
 import { getStaffContext } from "@/lib/data/staff-context";
 import {
+  getClosedEntriesForTotals,
   getLastEntryForPerson,
   getProjectsAndClients,
   getRememberedPersonId,
   getRunningEntries,
   getTimePeople,
+  getTimings,
 } from "@/lib/data/time-tracking";
 import { permissions } from "@/lib/permissions";
-import { todayInRome } from "@/lib/time-tracking";
-import type { TimePerson } from "@/lib/types";
+import { emptyAreaMinutes, summarizeProject, todayInRome, type AreaMinutes } from "@/lib/time-tracking";
+import { TIME_AREAS, type TimePerson } from "@/lib/types";
 import { createTimePerson, setTimePersonActive } from "./actions";
-import { TimeEntryForm, type ClientOption } from "./time-entry-form";
+import { TimeEntryForm, type ClientOption, type ProjectBudget } from "./time-entry-form";
 import { RunningTimers, type RunningTimerView } from "./timer-card";
 
 export default async function TempiPage() {
   const { supabase, profile } = await getStaffContext();
 
-  const [people, { projects, clients }, running, rememberedId] = await Promise.all([
+  // getRunningEntries chiude prima i timer oltre le 8 ore: va prima dei totali.
+  const running = await getRunningEntries(supabase);
+  const [people, { projects, clients }, rememberedId, timings, closed] = await Promise.all([
     getTimePeople(supabase),
     getProjectsAndClients(supabase),
-    getRunningEntries(supabase),
     getRememberedPersonId(),
+    getTimings(supabase),
+    getClosedEntriesForTotals(supabase),
   ]);
+
+  // Ore previste e usate per cantiere: servono all'avviso riserva / ore extra.
+  const usedByProject = new Map<string, AreaMinutes>();
+  for (const e of closed) {
+    const m = usedByProject.get(e.project_id) ?? emptyAreaMinutes();
+    m[e.area] += e.minutes ?? 0;
+    usedByProject.set(e.project_id, m);
+  }
+  const timingByProject = new Map(timings.map((t) => [t.project_id, t]));
+  const budget: ProjectBudget = Object.fromEntries(
+    projects.map((p) => {
+      const { areas } = summarizeProject(timingByProject.get(p.id) ?? null, usedByProject.get(p.id) ?? emptyAreaMinutes());
+      return [
+        p.id,
+        {
+          hasTiming: timingByProject.has(p.id),
+          areas: Object.fromEntries(
+            TIME_AREAS.map((a) => [a, { level: areas[a].level, remainingMinutes: areas[a].remainingMinutes }]),
+          ) as ProjectBudget[string]["areas"],
+        },
+      ];
+    }),
+  );
 
   const activePeople = people.filter((p) => p.is_active).map((p) => ({ id: p.id, name: p.name }));
   const personName = new Map(people.map((p) => [p.id, p.name]));
@@ -76,12 +104,18 @@ export default async function TempiPage() {
     <div className="flex max-w-2xl flex-col gap-6">
       <LiveRefresh
         channel="staff-tempi"
-        subscriptions={[{ table: "time_entries" }, { table: "time_people" }, { table: "projects" }]}
+        subscriptions={[{ table: "time_entries" }, { table: "time_people" }, { table: "projects" }, { table: "project_timing" }]}
       />
 
       <RunningTimers running={runningViews} />
 
-      <TimeEntryForm people={activePeople} clients={clientOptions} defaults={defaults} today={todayInRome()} />
+      <TimeEntryForm
+        people={activePeople}
+        clients={clientOptions}
+        defaults={defaults}
+        today={todayInRome()}
+        budget={budget}
+      />
 
       <Link
         href="/staff/monitor"

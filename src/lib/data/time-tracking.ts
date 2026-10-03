@@ -41,8 +41,15 @@ export async function getTimings(supabase: Supabase): Promise<ProjectTiming[]> {
   return (data ?? []) as ProjectTiming[];
 }
 
+// Chiude a 8 ore esatte i timer dimenticati accesi (funzione sul database,
+// migration 0013). Va chiamata prima di leggere timer in corso o totali.
+export async function closeStaleTimers(supabase: Supabase) {
+  await supabase.rpc("close_stale_timers");
+}
+
 // Timer in corso (al massimo uno per persona: lo garantisce un indice sul database).
 export async function getRunningEntries(supabase: Supabase): Promise<TimeEntry[]> {
+  await closeStaleTimers(supabase);
   const { data } = await supabase.from("time_entries").select("*").is("ended_at", null).order("started_at");
   return (data ?? []) as TimeEntry[];
 }
@@ -51,9 +58,9 @@ export async function getRunningEntries(supabase: Supabase): Promise<TimeEntry[]
 export async function getClosedEntriesForTotals(supabase: Supabase) {
   const { data } = await supabase
     .from("time_entries")
-    .select("project_id, person_id, area, minutes")
+    .select("project_id, person_id, area, minutes, started_at")
     .not("minutes", "is", null);
-  return (data ?? []) as Pick<TimeEntry, "project_id" | "person_id" | "area" | "minutes">[];
+  return (data ?? []) as Pick<TimeEntry, "project_id" | "person_id" | "area" | "minutes" | "started_at">[];
 }
 
 // Storico, dalla più recente, una pagina alla volta.

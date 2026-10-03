@@ -3,6 +3,9 @@ import { TIME_AREAS, type ProjectTiming, type TimeArea, type TimeEntry } from "@
 // Da quale percentuale di ore usate parte l'avviso visivo "ti stai avvicinando".
 export const TIME_WARNING_THRESHOLD = 0.8;
 
+// Un timer si ferma da solo dopo 8 ore di seguito (vedi migration 0013).
+export const TIMER_MAX_MINUTES = 8 * 60;
+
 // Il menu delle ore previste (sezione Timing) propone da 0 a 100.
 export const TIMING_MAX_HOURS = 100;
 

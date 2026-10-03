@@ -1,11 +1,12 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Play, PenLine } from "lucide-react";
+import { Fuel, OctagonAlert, Play, PenLine } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
-import type { TimeArea } from "@/lib/types";
+import { formatMinutes } from "@/lib/time-tracking";
+import { TIME_AREA_LABEL, type TimeArea } from "@/lib/types";
 import { addManualEntry, startTimer, type TimeFormState } from "./actions";
 import { AreaPicker } from "./area-picker";
 
@@ -21,6 +22,12 @@ export interface ClientOption {
   projects: { id: string; label: string }[];
 }
 
+// Stato delle ore previste per cantiere e area, per avvisare prima di registrare.
+export type ProjectBudget = Record<
+  string,
+  { hasTiming: boolean; areas: Record<TimeArea, { level: "none" | "ok" | "warning" | "over"; remainingMinutes: number }> }
+>;
+
 const HOUR_OPTIONS = Array.from({ length: 13 }, (_, i) => i); // 0-12
 const MINUTE_OPTIONS = Array.from({ length: 12 }, (_, i) => i * 5); // 0, 5, ... 55
 
@@ -34,9 +41,11 @@ export function TimeEntryForm({
   clients,
   defaults,
   today,
+  budget,
 }: {
   people: PersonOption[];
   clients: ClientOption[];
+  budget: ProjectBudget;
   defaults: { personId?: string; clientId?: string; projectId?: string; area?: TimeArea };
   // Data di oggi (YYYY-MM-DD, fuso dello studio), calcolata sul server.
   today: string;
@@ -48,6 +57,7 @@ export function TimeEntryForm({
   const [clientId, setClientId] = useState(defaults.clientId ?? "");
   const [projectId, setProjectId] = useState(defaults.projectId ?? "");
   const [manualOpen, setManualOpen] = useState(false);
+  const [area, setArea] = useState<TimeArea | undefined>(defaults.area);
 
   // Dopo un inserimento manuale riuscito il pannello si richiude. Aggiornamento
   // durante il render invece di useEffect, come negli altri form del portale.
@@ -83,7 +93,13 @@ export function TimeEntryForm({
   return (
     <Card>
       <CardContent className="p-5">
-        <form className="flex flex-col gap-3">
+        <form
+          className="flex flex-col gap-3"
+          onChange={(e) => {
+            const target = e.target;
+            if (target instanceof HTMLInputElement && target.name === "area") setArea(target.value as TimeArea);
+          }}
+        >
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="te_person">Persona</Label>
             <select
@@ -149,6 +165,8 @@ export function TimeEntryForm({
           </div>
 
           <AreaPicker defaultArea={defaults.area} />
+
+          <BudgetAlert budget={projectId ? budget[projectId] : undefined} area={area} />
 
           <Button
             type="submit"
@@ -218,4 +236,36 @@ export function TimeEntryForm({
       </CardContent>
     </Card>
   );
+}
+
+// Avviso "benzina": l'area scelta del cantiere è in riserva o ha già sforato.
+function BudgetAlert({ budget, area }: { budget: ProjectBudget[string] | undefined; area: TimeArea | undefined }) {
+  if (!budget || !area) return null;
+  if (!budget.hasTiming) {
+    return <p className="text-xs text-muted-foreground">Per questo cantiere non sono ancora state inserite le ore previste (Timing).</p>;
+  }
+  const { level, remainingMinutes } = budget.areas[area];
+  if (level === "over") {
+    return (
+      <p role="alert" className="flex items-start gap-2 rounded-md border border-status-red bg-status-red/10 p-3 text-sm text-status-red">
+        <OctagonAlert className="mt-0.5 h-4 w-4 shrink-0" />
+        <span>
+          <strong>Ore extra:</strong> {TIME_AREA_LABEL[area]} ha già superato le ore previste di{" "}
+          {formatMinutes(-remainingMinutes)}.
+        </span>
+      </p>
+    );
+  }
+  if (level === "warning") {
+    return (
+      <p role="alert" className="flex items-start gap-2 rounded-md border border-status-orange bg-status-orange/10 p-3 text-sm">
+        <Fuel className="mt-0.5 h-4 w-4 shrink-0 text-status-orange" />
+        <span>
+          <strong className="text-status-orange">Riserva:</strong> per {TIME_AREA_LABEL[area]} restano solo{" "}
+          {formatMinutes(remainingMinutes)} delle ore previste.
+        </span>
+      </p>
+    );
+  }
+  return null;
 }

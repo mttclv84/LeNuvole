@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { TIMING_MAX_HOURS } from "@/lib/time-tracking";
 import { saveProjectTiming, type TimingFormState } from "./actions";
 
@@ -48,7 +49,9 @@ export function TimingForm({
               value={values[f.name]}
               onChange={(e) => setValues((v) => ({ ...v, [f.name]: Number(e.target.value) }))}
               disabled={!editable}
-              className="h-12 w-full rounded-md border border-border bg-card px-3 text-base tabular-nums disabled:opacity-80"
+              // Dopo il salvataggio (per lo staff) le caselle restano visibili ma
+              // spente e semitrasparenti: si leggono, non si cambiano.
+              className="h-12 w-full rounded-md border border-border bg-card px-3 text-base tabular-nums disabled:cursor-not-allowed disabled:border-dashed disabled:bg-transparent disabled:opacity-50"
             >
               {HOUR_OPTIONS.map((h) => (
                 <option key={h} value={h}>
@@ -64,7 +67,10 @@ export function TimingForm({
           <output
             id="timing_total"
             aria-live="polite"
-            className="flex h-12 items-center rounded-md border border-border bg-muted px-3 text-base font-semibold tabular-nums"
+            className={cn(
+              "flex h-12 items-center rounded-md border border-border bg-muted px-3 text-base font-semibold tabular-nums",
+              !editable && "border-dashed bg-transparent opacity-50",
+            )}
           >
             {total} {total === 1 ? "ora" : "ore"}
           </output>
