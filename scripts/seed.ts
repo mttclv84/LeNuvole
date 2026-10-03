@@ -77,7 +77,6 @@ async function upsertProfile(profile: {
   id: string;
   role: "owner" | "staff" | "client";
   display_name: string;
-  project_id?: string | null;
 }) {
   const { error } = await supabase.from("profiles").upsert(profile);
   if (error) throw error;
@@ -121,12 +120,11 @@ async function main() {
 
   await upsertProfile({ id: owner.id, role: "owner", display_name: "Bea" });
   await upsertProfile({ id: staff.id, role: "staff", display_name: "Staff Le Nuvole" });
-  await upsertProfile({
-    id: client.id,
-    role: "client",
-    display_name: "Famiglia Bizzotto",
-    project_id: projectId,
-  });
+  await upsertProfile({ id: client.id, role: "client", display_name: "Famiglia Bizzotto" });
+
+  // Il cantiere appartiene al cliente (un cliente può averne più d'uno).
+  const { error: linkError } = await supabase.from("projects").update({ client_id: client.id }).eq("id", projectId);
+  if (linkError) throw linkError;
 
   console.log("Popolamento budget, lavorazioni, timeline...");
 

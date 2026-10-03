@@ -20,10 +20,12 @@ Next.js 16 (App Router) + TypeScript + Tailwind CSS v4, backend Supabase
    - `supabase/migrations/0001_init.sql` (tabelle + Row Level Security)
    - `supabase/migrations/0002_storage.sql` (bucket file + policy)
    - `supabase/migrations/0003_realtime.sql` (chat in tempo reale)
-   - poi tutte le successive (`0004` … `0011`) in ordine numerico, ciascuna come
-     esecuzione separata. La `0010` aggiunge la gestione tempi clienti (sezione
-     "Tempi" del pannello staff), la `0011` l'elenco delle persone tra cui si
-     sceglie nel menu quando si registra il tempo (Mattia, Federica, Lesly).
+   - poi tutte le successive (`0004` … `0012`) in ordine numerico, ciascuna come
+     esecuzione separata. La `0010` aggiunge la gestione tempi (sezione "Tempi"
+     del pannello staff), la `0011` l'elenco delle persone tra cui si sceglie nel
+     menu quando si registra il tempo (Mattia, Federica, Lesly), la `0012` permette
+     più cantieri per cliente, aggiunge la sezione Timing del cantiere e lega i
+     tempi ai cantieri.
 
 ## 2. Installare ed eseguire in locale
 
@@ -74,7 +76,8 @@ casuale e viene stampata una sola volta a fine esecuzione (oppure la imposti tu 
 - `src/app/(staff)/staff/*` — pannello staff: elenco cantieri, dettaglio
   cantiere (stato, budget, lavorazioni, timeline), foto, documenti, chat;
   `staff/utenti` è riservato al Super User (creazione, blocco ed eliminazione
-  degli account staff); `staff/tempi` è la gestione tempi clienti; i permessi
+  degli account staff); `staff/[projectId]/timing` le ore previste del cantiere,
+  `staff/tempi` la registrazione dei tempi, `staff/monitor` storico e riepiloghi; i permessi
   stanno tutti in `src/lib/permissions.ts`.
 - `src/proxy.ts` + `src/lib/supabase/proxy.ts` — rinfresca la sessione e
   instrada ogni richiesta in base al ruolo (cliente / staff / owner) e allo

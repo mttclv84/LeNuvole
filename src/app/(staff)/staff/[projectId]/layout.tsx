@@ -11,6 +11,7 @@ const TAB_SUFFIXES = [
   { suffix: "/foto", label: "Foto" },
   { suffix: "/documenti", label: "Documenti" },
   { suffix: "/chat", label: "Messaggi" },
+  { suffix: "/timing", label: "Timing" },
 ];
 
 export default async function ProjectLayout({

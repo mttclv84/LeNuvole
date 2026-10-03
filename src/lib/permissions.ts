@@ -21,6 +21,9 @@ export const permissions = {
   // Cancellazione definitiva di account, cantieri e commesse (non reversibile).
   deleteForever: (role: UserRole) => isOwner(role),
 
+  // Modificare le ore previste (Timing) di un cantiere dopo il primo salvataggio.
+  editSavedTiming: (role: UserRole) => isOwner(role),
+
   // Correggere o eliminare le voci di tempo di altre persone.
   correctOthersTime: (role: UserRole) => isOwner(role),
 

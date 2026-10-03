@@ -12,7 +12,7 @@ import { ProjectStatusForm } from "./project-status-form";
 import { getStaffContext } from "@/lib/data/staff-context";
 import { getStaffProject } from "@/lib/data/staff-project";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { WORK_ITEM_STATUS_LABEL, computeWorkProgress, type BudgetItem, type Payment, type WorkItem } from "@/lib/types";
+import { WORK_ITEM_STATUS_LABEL, computeWorkProgress, type BudgetItem, type Payment, type Profile, type WorkItem } from "@/lib/types";
 import {
   addBudgetItem,
   addWorkItem,
@@ -47,11 +47,16 @@ export default async function ProjectOverviewPage({
   const { supabase } = await getStaffContext();
   const project = await getStaffProject(supabase, projectId);
 
-  const [{ data: budgetItems }, { data: workItems }, { data: payments }] = await Promise.all([
+  const [{ data: budgetItems }, { data: workItems }, { data: payments }, { data: clients }] = await Promise.all([
     supabase.from("budget_items").select("*").eq("project_id", projectId).order("created_at"),
     supabase.from("work_items").select("*").eq("project_id", projectId).order("start_date"),
     supabase.from("payments").select("*").eq("project_id", projectId).order("payment_date", { ascending: false }),
+    supabase.from("profiles").select("id, display_name, active").eq("role", "client").order("display_name"),
   ]);
+  // Nel menu: clienti attivi, più quello attuale anche se disattivato.
+  const clientOptions = ((clients ?? []) as Pick<Profile, "id" | "display_name" | "active">[]).filter(
+    (c) => c.active || c.id === project.client_id,
+  );
 
   const items = (workItems ?? []) as WorkItem[];
   const progress = computeWorkProgress(items);
@@ -76,7 +81,7 @@ export default async function ProjectOverviewPage({
           <CardTitle>Stato lavori</CardTitle>
         </CardHeader>
         <CardContent>
-          <ProjectStatusForm project={project} projectId={projectId} />
+          <ProjectStatusForm project={project} projectId={projectId} clients={clientOptions} />
 
           <div className="mt-4 border-t border-border pt-4">
             {!project.is_archived ? (

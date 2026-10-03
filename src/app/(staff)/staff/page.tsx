@@ -19,17 +19,21 @@ export default async function StaffProjectsPage() {
 
   const [{ data: projects }, { data: clients }] = await Promise.all([
     supabase.from("projects").select("*").order("created_at", { ascending: false }),
-    supabase.from("profiles").select("*").eq("role", "client"),
+    supabase.from("profiles").select("*").eq("role", "client").order("display_name"),
   ]);
 
   const items = (projects ?? []) as Project[];
   const active = items.filter((p) => !p.is_archived);
   const archived = items.filter((p) => p.is_archived);
   const allClients = (clients ?? []) as Profile[];
-  const unassignedClients = allClients.filter((c) => !c.project_id);
-  const clientNameByProjectId = new Map(
-    allClients.filter((c) => c.project_id).map((c) => [c.project_id as string, c.display_name]),
-  );
+  // Un cliente può avere più cantieri: si sceglie tra tutti i clienti attivi.
+  const selectableClients = allClients.filter((c) => c.active);
+  const clientNameById = new Map(allClients.map((c) => [c.id, c.display_name]));
+  const clientNameByProjectId = new Map<string, string>();
+  for (const p of items) {
+    const name = p.client_id ? clientNameById.get(p.client_id) : undefined;
+    if (name) clientNameByProjectId.set(p.id, name);
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -56,7 +60,7 @@ export default async function StaffProjectsPage() {
                 className="h-10 w-56 rounded-md border border-border bg-card px-3 text-sm"
               >
                 <option value="">Seleziona…</option>
-                {unassignedClients.map((c) => (
+                {selectableClients.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.display_name}
                   </option>
@@ -75,9 +79,9 @@ export default async function StaffProjectsPage() {
               <Plus className="h-4 w-4" /> Crea
             </Button>
           </form>
-          {unassignedClients.length === 0 && (
+          {selectableClients.length === 0 && (
             <p className="mt-2 text-xs text-muted-foreground">
-              Nessun cliente registrato disponibile: registrane uno da &quot;Clienti&quot; prima di creare il cantiere.
+              Nessun cliente registrato: registrane uno da &quot;Clienti&quot; prima di creare il cantiere.
             </p>
           )}
         </CardContent>

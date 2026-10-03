@@ -54,16 +54,11 @@ export async function createClientRecord(
 
   const admin = createAdminClient();
 
-  // Un cantiere può essere abbinato a un solo cliente: il menu in UI già
-  // esclude quelli presi, questo controllo copre il caso in cui un altro
-  // cliente venga assegnato a quel cantiere nel frattempo.
+  // Un cantiere ha un solo cliente: il menu in UI mostra solo quelli liberi,
+  // questo controllo copre il caso in cui venga abbinato nel frattempo.
   if (project_id) {
-    const { data: alreadyTaken } = await admin
-      .from("profiles")
-      .select("id")
-      .eq("project_id", project_id)
-      .maybeSingle();
-    if (alreadyTaken) {
+    const { data: project } = await admin.from("projects").select("client_id").eq("id", project_id).maybeSingle();
+    if (!project || project.client_id) {
       return { error: "Quel cantiere è già abbinato a un altro cliente." };
     }
   }
@@ -88,10 +83,14 @@ export async function createClientRecord(
     phone: phone || null,
     address: address || null,
     notes: notes || null,
-    project_id: project_id || null,
   });
   if (profileError) {
     return { error: "Account creato ma la scheda cliente non è stata salvata: contattare l'assistenza." };
+  }
+
+  if (project_id) {
+    await admin.from("projects").update({ client_id: created.user.id }).eq("id", project_id).is("client_id", null);
+    revalidatePath("/staff");
   }
 
   revalidatePath("/staff/clienti");
@@ -132,7 +131,6 @@ export async function updateClientRecord(
   const new_password = str(formData, "new_password");
   const phone = str(formData, "phone");
   const address = str(formData, "address");
-  const project_id = str(formData, "project_id");
   const notes = str(formData, "notes");
 
   if (!first_name || !last_name || !email) {
@@ -143,18 +141,6 @@ export async function updateClientRecord(
   }
 
   const admin = createAdminClient();
-
-  if (project_id) {
-    const { data: alreadyTaken } = await admin
-      .from("profiles")
-      .select("id")
-      .eq("project_id", project_id)
-      .neq("id", id)
-      .maybeSingle();
-    if (alreadyTaken) {
-      return { error: "Quel cantiere è già abbinato a un altro cliente." };
-    }
-  }
 
   const authUpdate: { email?: string; password?: string; email_confirm?: boolean } = {
     email,
@@ -177,7 +163,6 @@ export async function updateClientRecord(
       phone: phone || null,
       address: address || null,
       notes: notes || null,
-      project_id: project_id || null,
     })
     .eq("id", id);
 

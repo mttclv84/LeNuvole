@@ -25,10 +25,13 @@ export async function createProject(formData: FormData) {
   const work_start_date = str(formData, "work_start_date");
   if (!client_label || !client_id) return;
 
+  // Un cliente può avere più cantieri: il cantiere nasce già abbinato al
+  // cliente scelto, che da "registrato" diventa (o resta) "gestito".
   const { data, error } = await supabase
     .from("projects")
     .insert({
       client_label,
+      client_id,
       contract_signed_date: contract_signed_date || null,
       work_start_date: work_start_date || null,
     })
@@ -37,13 +40,10 @@ export async function createProject(formData: FormData) {
 
   if (error || !data) return;
 
-  // Il cliente selezionato passa da "registrato" a "gestito" (ora ha un
-  // cantiere abbinato e può vederlo entrando nel portale).
-  await supabase.from("profiles").update({ project_id: data.id }).eq("id", client_id);
-
   revalidatePath("/staff");
   revalidatePath("/staff/clienti");
-  redirect(`/staff/${data.id}`);
+  // Subito alla sezione Timing, per inserire le ore previste.
+  redirect(`/staff/${data.id}/timing`);
 }
 
 export type UpdateProjectStatusState = { error?: string; success?: boolean } | undefined;
@@ -60,6 +60,7 @@ export async function updateProjectStatus(
   const contract_signed_date = str(formData, "contract_signed_date");
   const work_start_date = str(formData, "work_start_date");
   const color = str(formData, "color");
+  const client_id = str(formData, "client_id");
 
   const { error } = await supabase
     .from("projects")
@@ -69,11 +70,13 @@ export async function updateProjectStatus(
       contract_signed_date: contract_signed_date || null,
       work_start_date: work_start_date || null,
       ...(color && { color }),
+      ...(client_id && { client_id }),
     })
     .eq("id", projectId);
 
   revalidatePath(`/staff/${projectId}`);
   revalidatePath("/staff");
+  revalidatePath("/staff/clienti");
 
   if (error) {
     return { error: "Non è stato possibile salvare le modifiche." };

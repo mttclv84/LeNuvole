@@ -63,7 +63,7 @@ export async function updateSession(request: NextRequest) {
   // Utente autenticato: recuperiamo ruolo, stato attivo e cantiere per instradarlo.
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, active, project_id")
+    .select("role, active")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -75,7 +75,17 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const isClientWithoutProject = profile.role === "client" && !profile.project_id;
+  // Un cliente può avere più cantieri (projects.client_id): ne basta uno.
+  let isClientWithoutProject = false;
+  if (profile.role === "client") {
+    const { data: anyProject } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("client_id", user.id)
+      .limit(1)
+      .maybeSingle();
+    isClientWithoutProject = !anyProject;
+  }
   const home = profile.role !== "client" ? STAFF_HOME : isClientWithoutProject ? NO_PROJECT_PATH : CLIENT_HOME;
 
   if (pathname === LOGIN_PATH || pathname === "/") {

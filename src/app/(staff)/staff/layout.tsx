@@ -1,4 +1,4 @@
-import { Building2, CalendarClock, ScrollText, Timer, UserCog, Users } from "lucide-react";
+import { BarChart3, Building2, CalendarClock, ScrollText, Timer, UserCog, Users } from "lucide-react";
 import { AppNav, type NavLink } from "@/components/app-nav";
 import { AppHeader } from "@/components/app-header";
 import { getStaffContext } from "@/lib/data/staff-context";
@@ -13,6 +13,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
     { href: "/staff", label: "Cantieri", icon: <Building2 className="h-4 w-4" />, emphasis: true },
     { href: "/staff/management-cantieri", label: "Management Cantieri", icon: <CalendarClock className="h-4 w-4" /> },
     { href: "/staff/tempi", label: "Tempi", icon: <Timer className="h-4 w-4" /> },
+    { href: "/staff/monitor", label: "Monitor", icon: <BarChart3 className="h-4 w-4" /> },
   ];
   const canSeeUsers = permissions.accessUsersPage(profile.role);
   if (canSeeUsers) {

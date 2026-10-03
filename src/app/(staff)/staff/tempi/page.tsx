@@ -1,150 +1,97 @@
 import Link from "next/link";
+import { BarChart3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { LiveRefresh } from "@/components/live-refresh";
-import { SimpleTabs } from "@/components/simple-tabs";
 import { getStaffContext } from "@/lib/data/staff-context";
 import {
-  getJobsOverview,
-  getRecentEntriesForPerson,
+  getLastEntryForPerson,
+  getProjectsAndClients,
   getRememberedPersonId,
-  getRunningTimers,
+  getRunningEntries,
   getTimePeople,
 } from "@/lib/data/time-tracking";
 import { permissions } from "@/lib/permissions";
-import { formatMinutes, summarizeJob, todayInRome } from "@/lib/time-tracking";
-import type { Project, TimeEntry, TimeJob, TimePerson } from "@/lib/types";
+import { todayInRome } from "@/lib/time-tracking";
+import type { TimePerson } from "@/lib/types";
 import { createTimePerson, setTimePersonActive } from "./actions";
-import { ManualEntryButton, NewJobButton } from "./job-modals";
-import { TimerCard, type RunningTimerView, type TimerJobOption } from "./timer-card";
-import { UsageBadge, UsageBar } from "./usage";
+import { TimeEntryForm, type ClientOption } from "./time-entry-form";
+import { RunningTimers, type RunningTimerView } from "./timer-card";
 
-type JobRow = { job: TimeJob; entries: Pick<TimeEntry, "area" | "person_id" | "minutes">[] };
-
-export default async function TempiHomePage() {
+export default async function TempiPage() {
   const { supabase, profile } = await getStaffContext();
 
-  const people = await getTimePeople(supabase);
-  const activePeople = people.filter((p) => p.is_active).map((p) => ({ id: p.id, name: p.name }));
-
-  // La persona scelta l'ultima volta su questo dispositivo, se è ancora attiva.
-  const rememberedId = await getRememberedPersonId();
-  const defaultPersonId = activePeople.find((p) => p.id === rememberedId)?.id;
-
-  const [running, overview, recentEntries, { data: projects }] = await Promise.all([
-    getRunningTimers(supabase, people),
-    getJobsOverview(supabase),
-    defaultPersonId ? getRecentEntriesForPerson(supabase, defaultPersonId) : Promise.resolve([] as TimeEntry[]),
-    supabase.from("projects").select("id, client_label").eq("is_archived", false).order("client_label"),
+  const [people, { projects, clients }, running, rememberedId] = await Promise.all([
+    getTimePeople(supabase),
+    getProjectsAndClients(supabase),
+    getRunningEntries(supabase),
+    getRememberedPersonId(),
   ]);
 
-  // Commesse su cui ha lavorato di recente la persona scelta in cima, le altre per data di creazione.
-  const recentJobIds = [...new Set(recentEntries.map((e) => e.job_id))];
-  const rank = new Map(recentJobIds.map((id, i) => [id, i]));
-  const byRecency = (a: JobRow, b: JobRow) => (rank.get(a.job.id) ?? 9999) - (rank.get(b.job.id) ?? 9999);
+  const activePeople = people.filter((p) => p.is_active).map((p) => ({ id: p.id, name: p.name }));
+  const personName = new Map(people.map((p) => [p.id, p.name]));
+  const clientName = new Map(clients.map((c) => [c.id, c.display_name]));
+  const projectById = new Map(projects.map((p) => [p.id, p]));
 
-  const open = overview.filter((o) => !o.job.is_closed).sort(byRecency);
-  const closed = overview.filter((o) => o.job.is_closed);
+  // Clienti attivi con almeno un cantiere attivo: le uniche scelte possibili.
+  const clientOptions: ClientOption[] = clients
+    .filter((c) => c.active)
+    .map((c) => ({
+      id: c.id,
+      name: c.display_name,
+      projects: projects
+        .filter((p) => p.client_id === c.id && !p.is_archived)
+        .map((p) => ({ id: p.id, label: p.client_label })),
+    }))
+    .filter((c) => c.projects.length > 0);
 
-  const jobOptions: TimerJobOption[] = open.map(({ job }) => ({ id: job.id, label: `${job.client_name} — ${job.title}` }));
+  // Persona ricordata su questo dispositivo; da lì cantiere e area dell'ultima voce,
+  // così ripartire richiede un solo tocco.
+  const defaultPersonId = activePeople.find((p) => p.id === rememberedId)?.id;
+  const last = defaultPersonId ? await getLastEntryForPerson(supabase, defaultPersonId) : null;
+  const lastProject = last ? projectById.get(last.project_id) : undefined;
+  const lastStillSelectable = lastProject && clientOptions.some((c) => c.projects.some((p) => p.id === lastProject.id));
+  const defaults = {
+    personId: defaultPersonId,
+    clientId: lastStillSelectable ? (lastProject.client_id ?? undefined) : undefined,
+    projectId: lastStillSelectable ? lastProject.id : undefined,
+    area: last?.area,
+  };
 
-  // Un solo tocco per ripartire: preseleziono l'ultima commessa (se ancora aperta) e l'ultima area usate.
-  const lastEntry = recentEntries[0];
-  const defaultJobId = lastEntry && open.some((o) => o.job.id === lastEntry.job_id) ? lastEntry.job_id : undefined;
-  const defaultArea = lastEntry?.area;
-
-  const runningViews: RunningTimerView[] = running.map((r) => ({
-    entryId: r.entry.id,
-    personName: r.person?.name ?? "—",
-    jobLabel: `${r.job.client_name} — ${r.job.title}`,
-    area: r.entry.area,
-    startedAt: r.entry.started_at,
-  }));
-
-  const projectOptions = ((projects ?? []) as Pick<Project, "id" | "client_label">[]).map((p) => ({
-    id: p.id,
-    label: p.client_label,
-  }));
+  const runningViews: RunningTimerView[] = running.map((e) => {
+    const project = projectById.get(e.project_id);
+    return {
+      entryId: e.id,
+      personName: personName.get(e.person_id) ?? "—",
+      clientName: (project?.client_id && clientName.get(project.client_id)) || "—",
+      projectLabel: project?.client_label ?? "—",
+      area: e.area,
+      startedAt: e.started_at,
+    };
+  });
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
       <LiveRefresh
         channel="staff-tempi"
-        subscriptions={[{ table: "time_entries" }, { table: "time_jobs" }, { table: "time_people" }]}
+        subscriptions={[{ table: "time_entries" }, { table: "time_people" }, { table: "projects" }]}
       />
 
-      <TimerCard
-        running={runningViews}
-        jobs={jobOptions}
-        people={activePeople}
-        defaultJobId={defaultJobId}
-        defaultArea={defaultArea}
-        defaultPersonId={defaultPersonId}
-      />
+      <RunningTimers running={runningViews} />
 
-      <div className="flex gap-3">
-        <NewJobButton projects={projectOptions} />
-        <ManualEntryButton
-          jobs={jobOptions}
-          people={activePeople}
-          defaultJobId={defaultJobId}
-          defaultArea={defaultArea}
-          defaultPersonId={defaultPersonId}
-          today={todayInRome()}
-        />
-      </div>
+      <TimeEntryForm people={activePeople} clients={clientOptions} defaults={defaults} today={todayInRome()} />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Commesse recenti</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <SimpleTabs
-            tabs={[
-              { key: "aperte", label: `Aperte (${open.length})`, content: <JobList rows={open} /> },
-              { key: "chiuse", label: `Chiuse (${closed.length})`, content: <JobList rows={closed} /> },
-            ]}
-          />
-        </CardContent>
-      </Card>
+      <Link
+        href="/staff/monitor"
+        className="inline-flex items-center gap-2 self-start text-sm text-muted-foreground hover:text-foreground"
+      >
+        <BarChart3 className="h-4 w-4" /> Storico e riepiloghi nel Monitor
+      </Link>
 
       {permissions.accessUsersPage(profile.role) && <PeopleManager people={people} />}
     </div>
-  );
-}
-
-function JobList({ rows }: { rows: JobRow[] }) {
-  if (rows.length === 0) {
-    return <p className="text-sm text-muted-foreground">Nessuna commessa qui.</p>;
-  }
-  return (
-    <ul className="flex flex-col divide-y divide-border">
-      {rows.map(({ job, entries }) => {
-        const { total } = summarizeJob(job, entries);
-        return (
-          <li key={job.id}>
-            <Link href={`/staff/tempi/${job.id}`} className="flex flex-col gap-2 py-3 hover:bg-muted/50">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate font-semibold">{job.client_name}</p>
-                  <p className="truncate text-sm text-muted-foreground">{job.title}</p>
-                </div>
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  <span className="text-sm tabular-nums">
-                    {formatMinutes(total.usedMinutes)}
-                    <span className="text-muted-foreground"> / {formatMinutes(total.plannedMinutes)}</span>
-                  </span>
-                  <UsageBadge summary={total} />
-                </div>
-              </div>
-              <UsageBar summary={total} />
-            </Link>
-          </li>
-        );
-      })}
-    </ul>
   );
 }
 

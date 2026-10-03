@@ -5,11 +5,13 @@
 // pulsante extra. Deve essere un Client Component: un handler onChange non
 // può stare su un elemento reso da un Server Component.
 export function AutoSubmitSelect({
+  id,
   name,
   defaultValue,
   options,
   className,
 }: {
+  id?: string;
   name: string;
   defaultValue: string;
   options: { value: string; label: string; optionColor?: string }[];
@@ -21,6 +23,7 @@ export function AutoSubmitSelect({
 
   return (
     <select
+      id={id}
       name={name}
       defaultValue={defaultValue}
       onChange={(e) => e.currentTarget.form?.requestSubmit()}

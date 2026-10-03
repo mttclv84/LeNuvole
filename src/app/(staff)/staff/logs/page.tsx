@@ -14,8 +14,9 @@ const TABLE_LABEL: Record<string, string> = {
   documents: "Documento",
   payments: "Pagamento",
   profiles: "Utente/Cliente",
-  time_jobs: "Commessa tempi",
   time_entries: "Voce di tempo",
+  time_people: "Persona (tempi)",
+  project_timing: "Timing cantiere",
 };
 
 const OPERATION_LABEL = { insert: "Creato", update: "Modificato", delete: "Eliminato" } as const;

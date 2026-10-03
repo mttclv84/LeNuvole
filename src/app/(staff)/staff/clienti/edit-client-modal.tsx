@@ -6,9 +6,10 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { updateClientRecord, type UpdateClientState } from "./actions";
-import type { Profile, Project } from "@/lib/types";
+import type { Profile } from "@/lib/types";
 
-export function EditClientModal({ client, projects }: { client: Profile; projects: Project[] }) {
+// I cantieri del cliente si abbinano dal cantiere (Cantieri → Stato lavori → Cliente).
+export function EditClientModal({ client }: { client: Profile }) {
   const [open, setOpen] = useState(false);
   const [showPasswordField, setShowPasswordField] = useState(false);
   const [state, formAction, pending] = useActionState<UpdateClientState, FormData>(updateClientRecord, undefined);
@@ -55,22 +56,6 @@ export function EditClientModal({ client, projects }: { client: Profile; project
           <div className="flex flex-col gap-1.5">
             <Label htmlFor={`address-${client.id}`}>Indirizzo</Label>
             <Input id={`address-${client.id}`} name="address" defaultValue={client.address ?? ""} />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor={`project_id-${client.id}`}>Cantiere</Label>
-            <select
-              id={`project_id-${client.id}`}
-              name="project_id"
-              defaultValue={client.project_id ?? ""}
-              className="h-10 rounded-md border border-border bg-card px-3 text-sm"
-            >
-              <option value="">Nessuno</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.client_label}
-                </option>
-              ))}
-            </select>
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor={`notes-${client.id}`}>Commenti</Label>

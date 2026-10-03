@@ -18,14 +18,16 @@ export default async function GanttPage() {
     projectIds.length > 0
       ? supabase.from("work_items").select("*").in("project_id", projectIds).neq("status", "cancelled")
       : Promise.resolve({ data: [] as WorkItem[] }),
-    projectIds.length > 0
-      ? supabase.from("profiles").select("*").eq("role", "client").in("project_id", projectIds)
-      : Promise.resolve({ data: [] as Profile[] }),
+    supabase.from("profiles").select("*").eq("role", "client"),
   ]);
 
-  const clientNameByProjectId = new Map(
-    ((clientsData ?? []) as Profile[]).filter((c) => c.project_id).map((c) => [c.project_id as string, c.display_name]),
-  );
+  // Il cliente di ogni cantiere (projects.client_id).
+  const clientNameById = new Map(((clientsData ?? []) as Profile[]).map((c) => [c.id, c.display_name]));
+  const clientNameByProjectId = new Map<string, string>();
+  for (const p of projectList) {
+    const name = p.client_id ? clientNameById.get(p.client_id) : undefined;
+    if (name) clientNameByProjectId.set(p.id, name);
+  }
 
   const rows: GanttRow[] = ((workItemsData ?? []) as WorkItem[])
     .map((item) => {

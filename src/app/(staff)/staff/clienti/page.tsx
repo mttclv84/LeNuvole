@@ -15,22 +15,25 @@ export default async function ClientiPage() {
 
   const [{ data: clientsData }, { data: projects }] = await Promise.all([
     supabase.from("profiles").select("*").eq("role", "client").order("last_name"),
-    supabase.from("projects").select("*").eq("is_archived", false).order("client_label"),
+    supabase.from("projects").select("*").order("client_label"),
   ]);
   const clients = await withEmails((clientsData ?? []) as Profile[]);
   const projectList = (projects ?? []) as Project[];
-  const projectLabelById = new Map(projectList.map((p) => [p.id, p.client_label]));
+
+  // Un cliente può avere più cantieri, un cantiere ha un solo cliente.
+  const projectLabelsByClient = new Map<string, string[]>();
+  for (const p of projectList) {
+    if (!p.client_id) continue;
+    projectLabelsByClient.set(p.client_id, [...(projectLabelsByClient.get(p.client_id) ?? []), p.client_label]);
+  }
 
   const active = clients.filter((c) => c.active);
-  const registered = active.filter((c) => !c.project_id);
-  const managed = active.filter((c) => c.project_id);
+  const registered = active.filter((c) => !projectLabelsByClient.has(c.id));
+  const managed = active.filter((c) => projectLabelsByClient.has(c.id));
   const deactivated = clients.filter((c) => !c.active);
 
-  // Un cantiere può essere abbinato a un solo cliente: qui si escludono
-  // dal menu quelli già presi da un altro cliente (restano scelte solo per
-  // il proprio cliente attuale, vedi ClientList più sotto).
-  const assignedProjectIds = new Set(clients.filter((c) => c.project_id).map((c) => c.project_id as string));
-  const unassignedProjects = projectList.filter((p) => !assignedProjectIds.has(p.id));
+  // Nel modulo "Nuovo cliente" si può abbinare subito un cantiere ancora senza cliente.
+  const unassignedProjects = projectList.filter((p) => !p.client_id && !p.is_archived);
 
   return (
     <div className="flex flex-col gap-6">
@@ -65,9 +68,7 @@ export default async function ClientiPage() {
             content: (
               <ClientList
                 clients={registered}
-                projectLabelById={projectLabelById}
-                projects={projectList}
-                assignedProjectIds={assignedProjectIds}
+                projectLabelsByClient={projectLabelsByClient}
                 emptyLabel="Nessun cliente registrato senza cantiere."
               />
             ),
@@ -78,9 +79,7 @@ export default async function ClientiPage() {
             content: (
               <ClientList
                 clients={managed}
-                projectLabelById={projectLabelById}
-                projects={projectList}
-                assignedProjectIds={assignedProjectIds}
+                projectLabelsByClient={projectLabelsByClient}
                 emptyLabel="Nessun cliente con un cantiere abbinato ancora."
               />
             ),
@@ -92,9 +91,7 @@ export default async function ClientiPage() {
             content: (
               <ClientList
                 clients={deactivated}
-                projectLabelById={projectLabelById}
-                projects={projectList}
-                assignedProjectIds={assignedProjectIds}
+                projectLabelsByClient={projectLabelsByClient}
                 emptyLabel="Nessun cliente disattivato."
               />
             ),
@@ -107,15 +104,11 @@ export default async function ClientiPage() {
 
 function ClientList({
   clients,
-  projectLabelById,
-  projects,
-  assignedProjectIds,
+  projectLabelsByClient,
   emptyLabel,
 }: {
   clients: Profile[];
-  projectLabelById: Map<string, string>;
-  projects: Project[];
-  assignedProjectIds: Set<string>;
+  projectLabelsByClient: Map<string, string[]>;
   emptyLabel: string;
 }) {
   return (
@@ -135,9 +128,9 @@ function ClientList({
                   </p>
                   {c.address && <p className="text-xs text-muted-foreground">{c.address}</p>}
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Cantiere:{" "}
-                    {c.project_id && projectLabelById.get(c.project_id) ? (
-                      <span className="text-foreground">{projectLabelById.get(c.project_id)}</span>
+                    {(projectLabelsByClient.get(c.id)?.length ?? 0) > 1 ? "Cantieri" : "Cantiere"}:{" "}
+                    {projectLabelsByClient.has(c.id) ? (
+                      <span className="text-foreground">{projectLabelsByClient.get(c.id)!.join(", ")}</span>
                     ) : (
                       "nessuno assegnato"
                     )}
@@ -146,10 +139,7 @@ function ClientList({
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <Badge variant={c.active ? "green" : "red"}>{c.active ? "Attivo" : "Disattivato"}</Badge>
-                  <EditClientModal
-                    client={c}
-                    projects={projects.filter((p) => p.id === c.project_id || !assignedProjectIds.has(p.id))}
-                  />
+                  <EditClientModal client={c} />
                   <form action={toggleClientActive}>
                     <input type="hidden" name="id" value={c.id} />
                     <input type="hidden" name="active" value={(!c.active).toString()} />

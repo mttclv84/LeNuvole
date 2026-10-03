@@ -17,7 +17,6 @@ export interface Profile {
   role: UserRole;
   display_name: string;
   active: boolean;
-  project_id: string | null;
   created_at: string;
   // Campi CRM, popolati solo per i profili cliente (sezione Clienti).
   first_name: string | null;
@@ -44,6 +43,21 @@ export interface Project {
   // Colore assegnato dallo staff, usato per distinguere i clienti nel
   // Gantt multi-cantiere (vedi CLIENT_COLOR_PALETTE).
   color: string;
+  // Cliente del cantiere: un cliente può avere più cantieri, un cantiere un
+  // solo cliente (migration 0012).
+  client_id: string | null;
+}
+
+// Ore previste del cantiere (sezione Timing). Esiste solo dopo il primo
+// salvataggio: da lì le modifica solo il Super User.
+export interface ProjectTiming {
+  id: string;
+  project_id: string;
+  est_design_h: number;
+  est_quoting_h: number;
+  est_site_h: number;
+  saved_by: string | null;
+  saved_at: string;
 }
 
 export interface BudgetItem {
@@ -225,7 +239,8 @@ export const ROLE_LABEL: Record<UserRole, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Gestione tempi clienti (vedi supabase/migrations/0010_time_tracking.sql)
+// Gestione tempi (vedi migration 0010, 0011, 0012): il tempo si registra su
+// un cantiere, per una persona e per una delle tre aree.
 // ---------------------------------------------------------------------------
 
 export type TimeArea = "design" | "quoting" | "site";
@@ -239,21 +254,6 @@ export const TIME_AREA_LABEL: Record<TimeArea, string> = {
   site: "Cantiere",
 };
 
-export interface TimeJob {
-  id: string;
-  client_name: string;
-  title: string;
-  opened_on: string;
-  notes: string | null;
-  est_design_h: number;
-  est_quoting_h: number;
-  est_site_h: number;
-  project_id: string | null;
-  is_closed: boolean;
-  created_by: string | null;
-  created_at: string;
-}
-
 // Persona a cui si attribuisce il tempo (Mattia, Federica, Lesly...). Non è
 // un account di accesso: gli accessi sono condivisi e la persona si sceglie dal menu.
 export interface TimePerson {
@@ -266,7 +266,7 @@ export interface TimePerson {
 
 export interface TimeEntry {
   id: string;
-  job_id: string;
+  project_id: string;
   // A chi è attribuito il tempo.
   person_id: string;
   // L'account con cui la voce è stata inserita (null se poi eliminato).

@@ -23,18 +23,21 @@ export async function GET() {
 
   const [{ data: clientsData }, { data: projects }] = await Promise.all([
     supabase.from("profiles").select("*").eq("role", "client").order("last_name"),
-    supabase.from("projects").select("*"),
+    supabase.from("projects").select("*").order("client_label"),
   ]);
   const clients = await withEmails((clientsData ?? []) as Profile[]);
-  const projectLabelById = new Map(((projects ?? []) as Project[]).map((p) => [p.id, p.client_label]));
+  const projectLabelsByClient = new Map<string, string[]>();
+  for (const p of (projects ?? []) as Project[]) {
+    if (p.client_id) projectLabelsByClient.set(p.client_id, [...(projectLabelsByClient.get(p.client_id) ?? []), p.client_label]);
+  }
 
-  const header = ["Nome", "Email", "Telefono", "Indirizzo", "Cantiere", "Stato", "Note"];
+  const header = ["Nome", "Email", "Telefono", "Indirizzo", "Cantieri", "Stato", "Note"];
   const rows = clients.map((c) => [
     csvCell(c.display_name ?? ""),
     csvCell(c.email ?? ""),
     c.phone ? csvPhone(c.phone) : csvCell(""),
     csvCell(c.address ?? ""),
-    csvCell((c.project_id && projectLabelById.get(c.project_id)) || ""),
+    csvCell((projectLabelsByClient.get(c.id) ?? []).join(", ")),
     csvCell(c.active ? "Attivo" : "Disattivato"),
     csvCell(c.notes ?? ""),
   ]);

@@ -1,17 +1,16 @@
-import {
-  TIME_AREAS,
-  type TimeArea,
-  type TimeEntry,
-  type TimeJob,
-} from "@/lib/types";
+import { TIME_AREAS, type ProjectTiming, type TimeArea, type TimeEntry } from "@/lib/types";
 
 // Da quale percentuale di ore usate parte l'avviso visivo "ti stai avvicinando".
 export const TIME_WARNING_THRESHOLD = 0.8;
 
-export function estimatedHours(job: TimeJob, area: TimeArea): number {
-  if (area === "design") return Number(job.est_design_h);
-  if (area === "quoting") return Number(job.est_quoting_h);
-  return Number(job.est_site_h);
+// Il menu delle ore previste (sezione Timing) propone da 0 a 100.
+export const TIMING_MAX_HOURS = 100;
+
+export function estimatedHours(timing: Pick<ProjectTiming, "est_design_h" | "est_quoting_h" | "est_site_h"> | null, area: TimeArea): number {
+  if (!timing) return 0;
+  if (area === "design") return timing.est_design_h;
+  if (area === "quoting") return timing.est_quoting_h;
+  return timing.est_site_h;
 }
 
 // Data di oggi nel fuso dello studio (YYYY-MM-DD), non quello del server.
@@ -39,37 +38,16 @@ export function formatClock(totalSeconds: number): string {
   return `${hh}:${mm}:${ss}`;
 }
 
-// Accetta "30", "7,5", "7.5" -> 7.5. Valori non validi o negativi -> null.
-export function parseHours(raw: string): number | null {
-  const normalized = raw.trim().replace(",", ".");
-  if (normalized === "") return 0;
-  const value = Number(normalized);
-  if (!Number.isFinite(value) || value < 0 || value > 9999) return null;
-  return Math.round(value * 100) / 100;
-}
-
 export type UsageLevel = "none" | "ok" | "warning" | "over";
 
 export interface AreaSummary {
-  area: TimeArea;
   plannedMinutes: number;
   usedMinutes: number;
   // previste - utilizzate: negativo se si sfora.
   remainingMinutes: number;
-  // null se per l'area non sono previste ore.
+  // null se non sono previste ore.
   percent: number | null;
   level: UsageLevel;
-}
-
-export interface PersonSummary {
-  personId: string;
-  minutes: number;
-}
-
-export interface JobSummary {
-  areas: AreaSummary[];
-  total: AreaSummary;
-  perPerson: PersonSummary[];
 }
 
 function levelFor(planned: number, used: number): UsageLevel {
@@ -80,9 +58,8 @@ function levelFor(planned: number, used: number): UsageLevel {
   return "ok";
 }
 
-function buildSummary(area: TimeArea | "total", plannedMinutes: number, usedMinutes: number): AreaSummary {
+export function buildSummary(plannedMinutes: number, usedMinutes: number): AreaSummary {
   return {
-    area: area as TimeArea,
     plannedMinutes,
     usedMinutes,
     remainingMinutes: plannedMinutes - usedMinutes,
@@ -91,31 +68,38 @@ function buildSummary(area: TimeArea | "total", plannedMinutes: number, usedMinu
   };
 }
 
-// Conta solo le voci chiuse: un timer ancora in corso non ha minuti definitivi.
-export function summarizeJob(job: TimeJob, entries: Pick<TimeEntry, "area" | "person_id" | "minutes">[]): JobSummary {
-  const usedByArea = new Map<TimeArea, number>(TIME_AREAS.map((a) => [a, 0]));
-  const usedByPerson = new Map<string, number>();
+// Minuti per area. Conta solo le voci chiuse: un timer in corso non ha minuti definitivi.
+export type AreaMinutes = Record<TimeArea, number>;
 
-  for (const entry of entries) {
-    if (entry.minutes === null) continue;
-    usedByArea.set(entry.area, (usedByArea.get(entry.area) ?? 0) + entry.minutes);
-    usedByPerson.set(entry.person_id, (usedByPerson.get(entry.person_id) ?? 0) + entry.minutes);
-  }
-
-  const areas = TIME_AREAS.map((area) =>
-    buildSummary(area, Math.round(estimatedHours(job, area) * 60), usedByArea.get(area) ?? 0),
-  );
-  const totalPlanned = areas.reduce((sum, a) => sum + a.plannedMinutes, 0);
-  const totalUsed = areas.reduce((sum, a) => sum + a.usedMinutes, 0);
-
-  const perPerson = [...usedByPerson.entries()]
-    .map(([personId, minutes]) => ({ personId, minutes }))
-    .sort((a, b) => b.minutes - a.minutes);
-
-  return { areas, total: buildSummary("total", totalPlanned, totalUsed), perPerson };
+export function emptyAreaMinutes(): AreaMinutes {
+  return { design: 0, quoting: 0, site: 0 };
 }
 
-// Etichetta dell'avviso, come da specifica: "90% utilizzato" / "+4h".
+export function sumByArea(entries: Pick<TimeEntry, "area" | "minutes">[]): AreaMinutes {
+  const totals = emptyAreaMinutes();
+  for (const e of entries) {
+    if (e.minutes !== null) totals[e.area] += e.minutes;
+  }
+  return totals;
+}
+
+export function totalOf(minutes: AreaMinutes): number {
+  return TIME_AREAS.reduce((sum, a) => sum + minutes[a], 0);
+}
+
+// Previste/utilizzate per area e totale di un cantiere.
+export function summarizeProject(
+  timing: Pick<ProjectTiming, "est_design_h" | "est_quoting_h" | "est_site_h"> | null,
+  used: AreaMinutes,
+): { areas: Record<TimeArea, AreaSummary>; total: AreaSummary } {
+  const areas = Object.fromEntries(
+    TIME_AREAS.map((a) => [a, buildSummary(estimatedHours(timing, a) * 60, used[a])]),
+  ) as Record<TimeArea, AreaSummary>;
+  const planned = TIME_AREAS.reduce((sum, a) => sum + areas[a].plannedMinutes, 0);
+  return { areas, total: buildSummary(planned, totalOf(used)) };
+}
+
+// Etichetta dell'avviso: "90% utilizzato" / "+4h".
 export function usageLabel(summary: AreaSummary): string | null {
   if (summary.level === "over") {
     if (summary.plannedMinutes <= 0) return "Ore non previste";
