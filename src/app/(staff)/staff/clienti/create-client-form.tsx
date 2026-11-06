@@ -58,8 +58,14 @@ export function CreateClientForm({ projects }: { projects: Project[] }) {
             <LeadSourceSelect id="lead_source" className="w-44" />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="project_id">Cantiere (facoltativo)</Label>
-            <select id="project_id" name="project_id" className="h-10 w-56 rounded-md border border-border bg-card px-3 text-sm">
+            <Label htmlFor="project_id" className="text-status-orange">
+              Cantiere (facoltativo)
+            </Label>
+            <select
+              id="project_id"
+              name="project_id"
+              className="h-10 w-56 rounded-md border border-status-orange/40 bg-status-orange/10 px-3 text-sm"
+            >
               <option value="">Nessuno per ora</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>
