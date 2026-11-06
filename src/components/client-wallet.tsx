@@ -1,4 +1,4 @@
-import { Trash2 } from "lucide-react";
+import { DeleteWalletItemButton } from "@/components/delete-wallet-item-button";
 import { PayInvoiceButton } from "@/components/pay-invoice-button";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate, formatDateTime, todayInItaly } from "@/lib/utils";
@@ -39,7 +39,7 @@ export function ClientWallet({ items, staff }: { items: BudgetItem[]; staff?: St
                 </div>
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-semibold">{formatCurrency(item.amount)}</p>
-                  {staff && <DeleteItem staff={staff} id={item.id} />}
+                  {staff && <DeleteItem staff={staff} item={item} />}
                 </div>
               </li>
             ))}
@@ -82,27 +82,17 @@ export function ClientWallet({ items, staff }: { items: BudgetItem[]; staff?: St
                   ) : (
                     <Badge variant="orange">da saldare</Badge>
                   )}
-                  {staff &&
-                    (item.paid_at ? (
-                      <form action={staff.setInvoicePaid}>
-                        <input type="hidden" name="id" value={item.id} />
-                        <input type="hidden" name="project_id" value={staff.projectId} />
-                        <input type="hidden" name="paid" value="false" />
-                        <button type="submit" className="text-xs text-muted-foreground hover:underline">
-                          annulla
-                        </button>
-                      </form>
-                    ) : (
-                      <PayInvoiceButton
-                        id={item.id}
-                        projectId={staff.projectId}
-                        title={BUDGET_KIND_LABEL[item.kind]}
-                        amount={item.amount}
-                        today={today}
-                        action={staff.setInvoicePaid}
-                      />
-                    ))}
-                  {staff && <DeleteItem staff={staff} id={item.id} />}
+                  {staff && !item.paid_at && (
+                    <PayInvoiceButton
+                      id={item.id}
+                      projectId={staff.projectId}
+                      title={BUDGET_KIND_LABEL[item.kind]}
+                      amount={item.amount}
+                      today={today}
+                      action={staff.setInvoicePaid}
+                    />
+                  )}
+                  {staff && <DeleteItem staff={staff} item={item} />}
                 </div>
               </li>
             ))}
@@ -152,18 +142,14 @@ function ByUser({ staff, id, prefix }: { staff?: StaffActions; id: string | null
   );
 }
 
-function DeleteItem({ staff, id }: { staff: StaffActions; id: string }) {
+function DeleteItem({ staff, item }: { staff: StaffActions; item: BudgetItem }) {
   return (
-    <form action={staff.deleteItem}>
-      <input type="hidden" name="id" value={id} />
-      <input type="hidden" name="project_id" value={staff.projectId} />
-      <button
-        type="submit"
-        className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-status-red"
-        aria-label="Elimina"
-      >
-        <Trash2 className="h-4 w-4" />
-      </button>
-    </form>
+    <DeleteWalletItemButton
+      id={item.id}
+      projectId={staff.projectId}
+      title={item.kind === "conferma_ordine" ? item.label : BUDGET_KIND_LABEL[item.kind]}
+      amount={item.amount}
+      action={staff.deleteItem}
+    />
   );
 }

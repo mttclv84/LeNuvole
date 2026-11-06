@@ -223,7 +223,11 @@ export async function deleteBudgetItem(formData: FormData) {
   const supabase = await createClient();
   const id = str(formData, "id");
   const project_id = str(formData, "project_id");
-  await supabase.from("budget_items").delete().eq("id", id);
+  // Motivazione obbligatoria: finisce nei Logs con i dati della voce
+  // (funzione delete_budget_item, migration 0017).
+  const reason = str(formData, "reason");
+  if (!reason) return;
+  await supabase.rpc("delete_budget_item", { p_id: id, p_reason: reason });
   revalidatePath(`/staff/${project_id}`);
 }
 

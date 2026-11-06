@@ -33,12 +33,14 @@ function italianDayRange(day: string) {
 export default async function LogsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ giorno?: string; utenza?: string }>;
+  searchParams: Promise<{ giorno?: string; utenza?: string; portafoglio?: string }>;
 }) {
   const { supabase, profile } = await getStaffContext();
   requireAllowed(permissions.viewLogs(profile.role));
 
-  const { giorno, utenza } = await searchParams;
+  const { giorno, utenza, portafoglio } = await searchParams;
+  // Flag "Movimenti portafoglio": solo voci del Portafoglio cliente.
+  const walletOnly = portafoglio === "1";
   const day = giorno && /^\d{4}-\d{2}-\d{2}$/.test(giorno) ? giorno : "";
   const userId = utenza && /^[0-9a-f-]{36}$/i.test(utenza) ? utenza : "";
 
@@ -48,6 +50,7 @@ export default async function LogsPage({
     query = query.gte("created_at", from).lt("created_at", to);
   }
   if (userId) query = query.eq("actor_profile_id", userId);
+  if (walletOnly) query = query.eq("table_name", "budget_items");
 
   const [{ data: entries }, { data: profiles }, { data: projects }] = await Promise.all([
     query,
@@ -63,7 +66,7 @@ export default async function LogsPage({
   );
   const staffUsers = users.filter((u) => u.role !== "client");
   const clientUsers = users.filter((u) => u.role === "client");
-  const filtered = Boolean(day || userId);
+  const filtered = Boolean(day || userId || walletOnly);
 
   return (
     <Card>
@@ -102,6 +105,10 @@ export default async function LogsPage({
               </optgroup>
             </select>
           </div>
+          <label className="flex h-10 items-center gap-2 text-sm">
+            <input type="checkbox" name="portafoglio" value="1" defaultChecked={walletOnly} className="h-4 w-4" />
+            Movimenti portafoglio
+          </label>
           <Button type="submit" size="sm">
             Filtra
           </Button>

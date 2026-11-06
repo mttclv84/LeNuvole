@@ -149,5 +149,7 @@ export function auditEntrySubject(entry: AuditLogEntry, projectNameById: Map<str
 export function auditEntryNote(entry: AuditLogEntry): string | null {
   const d = (entry.data ?? {}) as Row;
   if (entry.table_name === "project_key_data_unlocks" && typeof d.reason === "string") return d.reason;
+  // Motivazione di un'eliminazione (es. voce del portafoglio, migration 0017).
+  if (typeof d._reason === "string") return d._reason;
   return null;
 }
