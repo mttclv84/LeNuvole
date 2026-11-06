@@ -24,6 +24,16 @@ async function getOrigin() {
   return `${proto}://${host}`;
 }
 
+// Link di accesso a uso singolo (tipo "recovery"): aperto dal cliente lo fa
+// entrare e lo porta su /imposta-password a scegliere la propria password.
+// Scade secondo l'impostazione OTP di Supabase Auth (default ~1 ora).
+async function buildAccessLink(admin: ReturnType<typeof createAdminClient>, email: string) {
+  const { data, error } = await admin.auth.admin.generateLink({ type: "recovery", email });
+  if (error || !data) return null;
+  const origin = await getOrigin();
+  return `${origin}/auth/confirm?token_hash=${data.properties.hashed_token}&type=recovery&next=${encodeURIComponent("/imposta-password")}`;
+}
+
 export type CreateClientState =
   | { error: string; success?: false }
   | { success: true; qrDataUrl: string; accessLink: string; clientName: string }
@@ -96,19 +106,14 @@ export async function createClientRecord(
 
   revalidatePath("/staff/clienti");
 
-  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
-    type: "recovery",
-    email,
-  });
-  if (linkError || !linkData) {
+  const accessLink = await buildAccessLink(admin, email);
+  if (!accessLink) {
     return {
       error:
         "Cliente creato, ma non è stato possibile generare il QR di primo accesso. Puoi reimpostare la password dalla scheda cliente e comunicarla a mano.",
     };
   }
 
-  const origin = await getOrigin();
-  const accessLink = `${origin}/auth/confirm?token_hash=${linkData.properties.hashed_token}&type=recovery&next=${encodeURIComponent("/imposta-password")}`;
   const qrDataUrl = await QRCode.toDataURL(accessLink, { width: 320, margin: 1 });
 
   return { success: true, qrDataUrl, accessLink, clientName: `${first_name} ${last_name}`.trim() };
@@ -212,4 +217,24 @@ export async function deleteClientPermanently(formData: FormData) {
   await admin.auth.admin.deleteUser(id);
   revalidatePath("/staff/clienti");
   revalidatePath("/staff");
+}
+
+export type AccessLinkState = { link: string; error?: undefined } | { error: string; link?: undefined };
+
+// Nuovo link di accesso per un cliente esistente (QR scaduto, password
+// dimenticata): qualsiasi utente staff lo genera e lo manda al cliente.
+export async function generateClientAccessLink(clientId: string): Promise<AccessLinkState> {
+  await getStaffContext();
+  const admin = createAdminClient();
+  // Ruolo ed email si leggono dal database, mai dal browser.
+  const { data: target } = await admin.from("profiles").select("role, active").eq("id", clientId).maybeSingle();
+  if (!target || target.role !== "client") return { error: "Cliente non trovato." };
+  if (!target.active) return { error: "Il cliente è disattivato: riattivalo prima di mandargli il link." };
+
+  const { data: authUser } = await admin.auth.admin.getUserById(clientId);
+  const email = authUser?.user?.email;
+  if (!email) return { error: "Il cliente non ha un'email di accesso." };
+
+  const link = await buildAccessLink(admin, email);
+  return link ? { link } : { error: "Non è stato possibile generare il link. Riprova." };
 }
