@@ -31,3 +31,16 @@ export function formatCurrency(value: number) {
     maximumFractionDigits: 0,
   }).format(value);
 }
+
+// Nome file sicuro per Supabase Storage: le chiavi accettano solo caratteri
+// ASCII "semplici", quindi accenti, apostrofi e simboli (es. "Preventivo
+// Dal Santo – città.pdf") farebbero fallire l'upload.
+export function safeFileName(name: string) {
+  const cleaned = name
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^A-Za-z0-9._-]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "");
+  return cleaned || "file";
+}

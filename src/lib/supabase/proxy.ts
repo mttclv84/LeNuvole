@@ -5,6 +5,7 @@ const CLIENT_HOME = "/dashboard";
 const STAFF_HOME = "/staff";
 const LOGIN_PATH = "/login";
 const NO_PROJECT_PATH = "/nessun-cantiere";
+const SET_PASSWORD_PATH = "/imposta-password";
 
 const CLIENT_PREFIXES = ["/dashboard", "/foto", "/documenti", "/chat", "/impostazioni"];
 const STAFF_PREFIX = "/staff";
@@ -16,6 +17,7 @@ const STAFF_PREFIX = "/staff";
  * - staff/owner che apre le rotte cliente -> STAFF_HOME
  * - cliente registrato ma senza cantiere abbinato -> NO_PROJECT_PATH invece del dashboard
  * - staff disattivato dall'owner -> logout forzato
+ * - cliente con password temporanea -> /imposta-password
  * - utente autenticato su /login -> redirect alla propria home
  */
 export async function updateSession(request: NextRequest) {
@@ -87,6 +89,19 @@ export async function updateSession(request: NextRequest) {
     isClientWithoutProject = !anyProject;
   }
   const home = profile.role !== "client" ? STAFF_HOME : isClientWithoutProject ? NO_PROJECT_PATH : CLIENT_HOME;
+
+  // Cliente con password temporanea (impostata dallo staff): finché non ne
+  // sceglie una sua, il portale lo porta solo su /imposta-password.
+  if (
+    profile.role === "client" &&
+    user.app_metadata?.must_change_password &&
+    (pathname === LOGIN_PATH || pathname === "/" || isClientRoute || isNoProjectRoute)
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = SET_PASSWORD_PATH;
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
 
   if (pathname === LOGIN_PATH || pathname === "/") {
     const url = request.nextUrl.clone();

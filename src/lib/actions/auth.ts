@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function logout() {
   const supabase = await createClient();
@@ -29,6 +30,17 @@ export async function changePassword(
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
     return { error: "Non è stato possibile aggiornare la password." };
+  }
+
+  // Password temporanea sostituita: si toglie l'obbligo di cambiarla.
+  // app_metadata è modificabile solo con la chiave di servizio.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user?.app_metadata?.must_change_password) {
+    await createAdminClient().auth.admin.updateUserById(user.id, {
+      app_metadata: { must_change_password: false },
+    });
   }
   return { success: true };
 }

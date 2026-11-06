@@ -143,11 +143,21 @@ export async function updateClientRecord(
 
   const admin = createAdminClient();
 
-  const authUpdate: { email?: string; password?: string; email_confirm?: boolean } = {
+  const authUpdate: {
+    email?: string;
+    password?: string;
+    email_confirm?: boolean;
+    app_metadata?: { must_change_password: boolean };
+  } = {
     email,
     email_confirm: true,
   };
-  if (new_password) authUpdate.password = new_password;
+  if (new_password) {
+    authUpdate.password = new_password;
+    // Password scelta dallo staff = temporanea: al prossimo accesso il
+    // cliente deve sostituirla con una sua (vedi getClientContext).
+    authUpdate.app_metadata = { must_change_password: true };
+  }
 
   const { error: authError } = await admin.auth.admin.updateUserById(id, authUpdate);
   if (authError) {

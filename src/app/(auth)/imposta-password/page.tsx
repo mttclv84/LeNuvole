@@ -12,6 +12,7 @@ export default async function ImpostaPasswordPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const mustChange = Boolean(user?.app_metadata?.must_change_password);
 
   return (
     <div className="flex flex-1 items-center justify-center bg-muted px-4 py-12">
@@ -21,7 +22,9 @@ export default async function ImpostaPasswordPage() {
           <h1 className="mt-4 text-xl font-semibold">Benvenuto/a in Le Nuvole</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             {user
-              ? "Scegli la password con cui accederai al tuo portale."
+              ? mustChange
+                ? "Stai usando una password temporanea: scegline una tua per continuare."
+                : "Scegli la password con cui accederai al tuo portale."
               : "Il link non è più valido: potrebbe essere scaduto o già stato usato."}
           </p>
         </div>

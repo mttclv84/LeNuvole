@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getStaffContext } from "@/lib/data/staff-context";
 import { permissions } from "@/lib/permissions";
+import { safeFileName } from "@/lib/utils";
 
 const BUCKET = "project-files";
 
@@ -217,7 +218,7 @@ export async function uploadMedia(formData: FormData) {
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) return;
 
-  const path = `${project_id}/media/${crypto.randomUUID()}-${file.name}`;
+  const path = `${project_id}/media/${crypto.randomUUID()}-${safeFileName(file.name)}`;
   const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, file);
   if (uploadError) return;
 
@@ -251,7 +252,7 @@ export async function uploadDocument(formData: FormData) {
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0 || !title) return;
 
-  const path = `${project_id}/documents/${crypto.randomUUID()}-${file.name}`;
+  const path = `${project_id}/documents/${crypto.randomUUID()}-${safeFileName(file.name)}`;
   const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, file);
   if (uploadError) return;
 

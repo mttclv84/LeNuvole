@@ -25,6 +25,8 @@ export async function getClientContext(): Promise<{
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+  // Password temporanea impostata dallo staff: prima va cambiata.
+  if (user!.app_metadata?.must_change_password) redirect("/imposta-password");
 
   const { data: profile } = await supabase
     .from("profiles")

@@ -84,7 +84,8 @@ export function EditClientModal({ client }: { client: Profile }) {
               </div>
             )}
             <p className="text-xs text-muted-foreground">
-              Non è possibile visualizzare la password esistente: è salvata in forma cifrata, per sicurezza.
+              Non è possibile visualizzare la password esistente: è salvata in forma cifrata, per sicurezza. Una
+              nuova password impostata qui è temporanea: al primo accesso il cliente dovrà sceglierne una sua.
             </p>
           </div>
           {state?.error && <p className="text-sm text-status-red">{state.error}</p>}

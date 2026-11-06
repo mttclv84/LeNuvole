@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { Paperclip, Send } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { cn, formatDateTime } from "@/lib/utils";
+import { cn, formatDateTime, safeFileName } from "@/lib/utils";
 import { STAFF_DISPLAY_NAME, type Message, type UserRole } from "@/lib/types";
 
 const BUCKET = "project-files";
@@ -95,7 +95,7 @@ export function ChatRoom({ projectId, profileId, role, myDisplayName, initialMes
     const file = e.target.files?.[0];
     if (!file) return;
     startTransition(async () => {
-      const path = `${projectId}/chat/${crypto.randomUUID()}-${file.name}`;
+      const path = `${projectId}/chat/${crypto.randomUUID()}-${safeFileName(file.name)}`;
       const { error } = await supabase.storage.from(BUCKET).upload(path, file);
       if (!error) {
         await sendMessage(null, path);
