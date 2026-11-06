@@ -81,8 +81,13 @@ export interface BudgetItem {
   // Colonna storica, non più usata dal Portafoglio cliente.
   status: BudgetStatus;
   kind: BudgetKind;
-  // Solo fatture: data in cui lo staff l'ha segnata come saldata.
+  // Solo fatture: data effettiva del pagamento (scelta dallo staff) e
+  // momento in cui è stato registrato (automatico, migration 0015).
   paid_at: string | null;
+  paid_recorded_at: string | null;
+  // Utenza che ha registrato la voce / l'ha segnata saldata (migration 0016).
+  created_by: string | null;
+  paid_by: string | null;
   created_at: string;
 }
 
@@ -184,6 +189,8 @@ export interface AuditLogEntry {
   operation: AuditOperation;
   actor_profile_id: string | null;
   data: Record<string, unknown> | null;
+  // Com'era la riga prima di una modifica (migration 0016).
+  old_data: Record<string, unknown> | null;
   created_at: string;
 }
 

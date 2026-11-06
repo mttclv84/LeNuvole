@@ -129,7 +129,12 @@ export default async function ProjectOverviewPage({
         </CardContent>
       </Card>
 
-      <Card>
+      {/* Bloccati: tutta la card in grigio, per vedere subito che non si modifica. */}
+      <Card
+        className={
+          project.key_data_locked_at ? "border-neutral-300 bg-neutral-200 dark:border-neutral-600 dark:bg-neutral-700" : undefined
+        }
+      >
         <CardHeader>
           <CardTitle>Dati contrattuali</CardTitle>
         </CardHeader>
@@ -193,7 +198,7 @@ export default async function ProjectOverviewPage({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-status-orange/30 bg-status-orange/10">
         <CardHeader>
           <CardTitle>Portafoglio cliente</CardTitle>
         </CardHeader>
@@ -222,16 +227,19 @@ export default async function ProjectOverviewPage({
             con l&apos;icona dei soldi diventano &quot;SALDATA&quot; con la data di oggi ed entrano nello storico. Il
             cliente vede tutto, senza poter modificare.
           </p>
-          <ClientWallet items={wallet} staff={{ projectId, setInvoicePaid, deleteItem: deleteBudgetItem }} />
+          <ClientWallet
+            items={wallet}
+            staff={{ projectId, setInvoicePaid, deleteItem: deleteBudgetItem, userNameById: staffNameById }}
+          />
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-status-orange/30 bg-status-orange/10">
         <CardHeader>
           <CardTitle>Storico pagamenti</CardTitle>
         </CardHeader>
         <CardContent>
-          <PaymentsHistory items={wallet} emptyLabel="Nessuna fattura saldata ancora." />
+          <PaymentsHistory items={wallet} emptyLabel="Nessuna fattura saldata ancora." userNameById={staffNameById} />
         </CardContent>
       </Card>
     </div>

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStaffContext, requireAllowed } from "@/lib/data/staff-context";
 import { permissions } from "@/lib/permissions";
+import { logEvent } from "@/lib/data/log-event";
 import type { UserRole } from "@/lib/types";
 
 function str(formData: FormData, key: string) {
@@ -62,6 +63,11 @@ export async function createAccount(
     return { error: "Utente creato ma il profilo non è stato salvato: contattare l'assistenza." };
   }
 
+  await logEvent(await createClient(), "staff_created", {
+    table: "profiles",
+    recordId: created.user.id,
+    data: { display_name, email },
+  });
   revalidatePath("/staff/utenti");
   return { success: true };
 }
@@ -113,6 +119,12 @@ export async function updateAccount(
     return { error: "Non è stato possibile salvare le modifiche." };
   }
 
+  const userClient = await createClient();
+  await logEvent(userClient, "staff_updated", { table: "profiles", recordId: id, operation: "update", data: { display_name } });
+  if (new_password) {
+    await logEvent(userClient, "staff_password", { table: "profiles", recordId: id, operation: "update", data: { display_name } });
+  }
+
   revalidatePath("/staff/utenti");
   return { success: true };
 }
@@ -148,6 +160,15 @@ export async function deleteAccount(formData: FormData) {
   const targetRole = await getTargetRole(admin, id);
   if (targetRole !== "staff") return;
 
-  await admin.auth.admin.deleteUser(id);
+  const { data: target } = await admin.from("profiles").select("display_name").eq("id", id).maybeSingle();
+  const { error } = await admin.auth.admin.deleteUser(id);
+  if (!error) {
+    await logEvent(await createClient(), "staff_deleted", {
+      table: "profiles",
+      recordId: id,
+      operation: "delete",
+      data: { display_name: target?.display_name ?? null },
+    });
+  }
   revalidatePath("/staff/utenti");
 }

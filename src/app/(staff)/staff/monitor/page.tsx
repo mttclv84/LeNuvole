@@ -202,7 +202,7 @@ export default async function MonitorPage({
         </CardContent>
       </Card>
 
-      {/* Approfondimento: per cantiere, per cliente, per persona */}
+      {/* Approfondimento: per cantiere, per cliente, per utenza */}
       <Card>
         <CardHeader>
           <CardTitle>Dettaglio previsioni</CardTitle>
@@ -217,7 +217,7 @@ export default async function MonitorPage({
             tabs={[
               { key: "cantiere", label: "Per cantiere", content: <ProjectGauges cards={projectCards} /> },
               { key: "cliente", label: "Per cliente", content: <ClientGauges cards={clientCards} /> },
-              { key: "persona", label: "Per persona", content: <PersonList groups={personGroups} /> },
+              { key: "persona", label: "Per utenza", content: <PersonList groups={personGroups} /> },
             ]}
           />
         </CardContent>

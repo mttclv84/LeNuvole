@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { logEvent } from "@/lib/data/log-event";
 
 export type LoginState = { error?: string } | undefined;
 
@@ -20,6 +21,7 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
   if (error) {
     return { error: "Email o password non corrette." };
   }
+  await logEvent(supabase, "login");
 
   // Il proxy (src/proxy.ts) verifica poi ruolo/stato e instrada alla home corretta.
   redirect(next && next.startsWith("/") ? next : "/");

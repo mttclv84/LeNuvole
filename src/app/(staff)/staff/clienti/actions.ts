@@ -8,6 +8,7 @@ import { createClient as createSupabaseServerClient } from "@/lib/supabase/serve
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStaffContext, requireAllowed } from "@/lib/data/staff-context";
 import { permissions } from "@/lib/permissions";
+import { logEvent } from "@/lib/data/log-event";
 
 function str(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -104,6 +105,12 @@ export async function createClientRecord(
     revalidatePath("/staff");
   }
 
+  await logEvent(await createSupabaseServerClient(), "client_created", {
+    table: "profiles",
+    recordId: created.user.id,
+    data: { display_name: `${first_name} ${last_name}`.trim(), ...(project_id && { project_id }) },
+  });
+
   revalidatePath("/staff/clienti");
 
   const accessLink = await buildAccessLink(admin, email);
@@ -186,6 +193,13 @@ export async function updateClientRecord(
     return { error: "Non è stato possibile salvare le modifiche." };
   }
 
+  const userClient = await createSupabaseServerClient();
+  const display_name = `${first_name} ${last_name}`.trim();
+  await logEvent(userClient, "client_updated", { table: "profiles", recordId: id, operation: "update", data: { display_name } });
+  if (new_password) {
+    await logEvent(userClient, "client_temp_password", { table: "profiles", recordId: id, operation: "update", data: { display_name } });
+  }
+
   revalidatePath("/staff/clienti");
   return { success: true };
 }
@@ -211,10 +225,18 @@ export async function deleteClientPermanently(formData: FormData) {
   const id = str(formData, "id");
   const admin = createAdminClient();
   // Ruolo e stato si leggono dal database, mai dal form.
-  const { data: target } = await admin.from("profiles").select("role, active").eq("id", id).maybeSingle();
+  const { data: target } = await admin.from("profiles").select("role, active, display_name").eq("id", id).maybeSingle();
   if (!target || target.role !== "client" || target.active) return;
 
-  await admin.auth.admin.deleteUser(id);
+  const { error } = await admin.auth.admin.deleteUser(id);
+  if (!error) {
+    await logEvent(await createSupabaseServerClient(), "client_deleted", {
+      table: "profiles",
+      recordId: id,
+      operation: "delete",
+      data: { display_name: target.display_name },
+    });
+  }
   revalidatePath("/staff/clienti");
   revalidatePath("/staff");
 }

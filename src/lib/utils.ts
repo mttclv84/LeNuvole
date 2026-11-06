@@ -35,6 +35,11 @@ export function formatCurrency(value: number) {
 // Nome file sicuro per Supabase Storage: le chiavi accettano solo caratteri
 // ASCII "semplici", quindi accenti, apostrofi e simboli (es. "Preventivo
 // Dal Santo – città.pdf") farebbero fallire l'upload.
+// Data di oggi in Italia (YYYY-MM-DD), anche se il server gira in UTC.
+export function todayInItaly() {
+  return new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Rome" });
+}
+
 export function safeFileName(name: string) {
   const cleaned = name
     .normalize("NFD")

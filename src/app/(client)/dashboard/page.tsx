@@ -84,7 +84,7 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-status-orange/30 bg-status-orange/10">
         <CardHeader>
           <CardTitle>Portafoglio cliente</CardTitle>
         </CardHeader>
@@ -93,7 +93,7 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-status-orange/30 bg-status-orange/10">
         <CardHeader>
           <CardTitle>Storico pagamenti</CardTitle>
         </CardHeader>

@@ -1,12 +1,15 @@
-import { Banknote, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
+import { PayInvoiceButton } from "@/components/pay-invoice-button";
 import { Badge } from "@/components/ui/badge";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, formatDateTime, todayInItaly } from "@/lib/utils";
 import { BUDGET_KIND_LABEL, computeWallet, type BudgetItem } from "@/lib/types";
 
 // Azioni disponibili solo nel pannello staff: il cliente vede le stesse
 // voci in sola lettura.
 type StaffActions = {
   projectId: string;
+  // Nomi delle utenze staff: chi ha registrato / saldato ogni voce.
+  userNameById: Map<string, string>;
   setInvoicePaid: (formData: FormData) => Promise<void>;
   deleteItem: (formData: FormData) => Promise<void>;
 };
@@ -15,6 +18,7 @@ type StaffActions = {
 // fatture emesse con lo stato "da saldare" / "SALDATA".
 export function ClientWallet({ items, staff }: { items: BudgetItem[]; staff?: StaffActions }) {
   const { orders, invoices, orderTotal } = computeWallet(items);
+  const today = todayInItaly();
 
   return (
     <div className="flex flex-col gap-5">
@@ -33,7 +37,10 @@ export function ClientWallet({ items, staff }: { items: BudgetItem[]; staff?: St
               <li key={item.id} className="flex items-center justify-between gap-3 py-2">
                 <div>
                   <p className="text-sm font-medium">{item.label}</p>
-                  <p className="text-xs text-muted-foreground">{formatDate(item.created_at)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatDate(item.created_at)}
+                    <ByUser staff={staff} id={item.created_by} prefix="registrata da" />
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-semibold">{formatCurrency(item.amount)}</p>
@@ -60,7 +67,16 @@ export function ClientWallet({ items, staff }: { items: BudgetItem[]; staff?: St
                       <span className="font-normal text-muted-foreground"> · {item.label}</span>
                     )}
                   </p>
-                  <p className="text-xs text-muted-foreground">Emessa il {formatDate(item.created_at)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Emessa il {formatDate(item.created_at)}
+                    <ByUser staff={staff} id={item.created_by} prefix="registrata da" />
+                  </p>
+                  {item.paid_at && (
+                    <p className="text-xs text-muted-foreground">
+                      Saldo registrato{item.paid_recorded_at && ` il ${formatDateTime(item.paid_recorded_at)}`}
+                      <ByUser staff={staff} id={item.paid_by} prefix="da" />
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-semibold">{formatCurrency(item.amount)}</p>
@@ -71,27 +87,26 @@ export function ClientWallet({ items, staff }: { items: BudgetItem[]; staff?: St
                   ) : (
                     <Badge variant="orange">da saldare</Badge>
                   )}
-                  {staff && (
-                    <form action={staff.setInvoicePaid}>
-                      <input type="hidden" name="id" value={item.id} />
-                      <input type="hidden" name="project_id" value={staff.projectId} />
-                      <input type="hidden" name="paid" value={item.paid_at ? "false" : "true"} />
-                      {item.paid_at ? (
+                  {staff &&
+                    (item.paid_at ? (
+                      <form action={staff.setInvoicePaid}>
+                        <input type="hidden" name="id" value={item.id} />
+                        <input type="hidden" name="project_id" value={staff.projectId} />
+                        <input type="hidden" name="paid" value="false" />
                         <button type="submit" className="text-xs text-muted-foreground hover:underline">
                           annulla
                         </button>
-                      ) : (
-                        <button
-                          type="submit"
-                          title="Segna come saldata (data di oggi)"
-                          aria-label="Segna come saldata"
-                          className="rounded-md p-1.5 text-status-green hover:bg-status-green/10"
-                        >
-                          <Banknote className="h-4 w-4" />
-                        </button>
-                      )}
-                    </form>
-                  )}
+                      </form>
+                    ) : (
+                      <PayInvoiceButton
+                        id={item.id}
+                        projectId={staff.projectId}
+                        title={BUDGET_KIND_LABEL[item.kind]}
+                        amount={item.amount}
+                        today={today}
+                        action={staff.setInvoicePaid}
+                      />
+                    ))}
                   {staff && <DeleteItem staff={staff} id={item.id} />}
                 </div>
               </li>
@@ -104,7 +119,16 @@ export function ClientWallet({ items, staff }: { items: BudgetItem[]; staff?: St
 }
 
 // Storico pagamenti: totali e fatture saldate, dalla più recente.
-export function PaymentsHistory({ items, emptyLabel }: { items: BudgetItem[]; emptyLabel: string }) {
+export function PaymentsHistory({
+  items,
+  emptyLabel,
+  userNameById,
+}: {
+  items: BudgetItem[];
+  emptyLabel: string;
+  // Solo nel pannello staff: nome dell'utenza che ha registrato il saldo.
+  userNameById?: Map<string, string>;
+}) {
   const { invoices, orderTotal, invoicedTotal, paidTotal, residual } = computeWallet(items);
   const paid = invoices
     .filter((i) => i.paid_at)
@@ -145,6 +169,12 @@ export function PaymentsHistory({ items, emptyLabel }: { items: BudgetItem[]; em
                   {BUDGET_KIND_LABEL[p.kind]}
                   {p.label !== BUDGET_KIND_LABEL[p.kind] && ` · ${p.label}`}
                 </p>
+                {p.paid_recorded_at && (
+                  <p className="text-xs text-muted-foreground">
+                    Registrato il {formatDateTime(p.paid_recorded_at)}
+                    {userNameById && p.paid_by && userNameById.get(p.paid_by) && ` da ${userNameById.get(p.paid_by)}`}
+                  </p>
+                )}
               </div>
               <p className="text-sm font-semibold">{formatCurrency(p.amount)}</p>
             </li>
@@ -152,6 +182,19 @@ export function PaymentsHistory({ items, emptyLabel }: { items: BudgetItem[]; em
         </ul>
       )}
     </div>
+  );
+}
+
+// " · registrata da Commerciale": solo nel pannello staff (il cliente non
+// può leggere i profili dello staff e vede sempre "Team Le Nuvole").
+function ByUser({ staff, id, prefix }: { staff?: StaffActions; id: string | null; prefix: string }) {
+  const name = staff && id ? staff.userNameById.get(id) : undefined;
+  if (!name) return null;
+  return (
+    <>
+      {" "}
+      · {prefix} <span className="text-foreground">{name}</span>
+    </>
   );
 }
 

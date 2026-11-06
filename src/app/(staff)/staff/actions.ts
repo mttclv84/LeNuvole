@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getStaffContext } from "@/lib/data/staff-context";
 import { permissions } from "@/lib/permissions";
-import { safeFileName } from "@/lib/utils";
+import { safeFileName, todayInItaly } from "@/lib/utils";
 import { BUDGET_KIND_LABEL, type BudgetKind } from "@/lib/types";
 
 const BUCKET = "project-files";
@@ -180,13 +180,8 @@ export async function deleteProjectPermanently(formData: FormData) {
 // (da saldare / saldate). Le modifica solo lo staff, il cliente le vede.
 const BUDGET_KINDS: BudgetKind[] = ["conferma_ordine", "fattura_acconto", "fattura_avanzamento", "fattura_saldo"];
 
-// Data di oggi in Italia (YYYY-MM-DD), anche se il server gira in UTC.
-function todayInItaly() {
-  return new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Rome" });
-}
-
 export async function addBudgetItem(formData: FormData) {
-  await getStaffContext();
+  const { profile } = await getStaffContext();
   const supabase = await createClient();
   const project_id = str(formData, "project_id");
   const kind = str(formData, "kind") as BudgetKind;
@@ -195,19 +190,29 @@ export async function addBudgetItem(formData: FormData) {
   // La descrizione è facoltativa: senza, vale il nome del tipo.
   const label = str(formData, "label") || BUDGET_KIND_LABEL[kind];
 
-  await supabase.from("budget_items").insert({ project_id, kind, label, amount, status: "confirmed" });
+  await supabase
+    .from("budget_items")
+    .insert({ project_id, kind, label, amount, status: "confirmed", created_by: profile.id });
   revalidatePath(`/staff/${project_id}`);
 }
 
 export async function setInvoicePaid(formData: FormData) {
-  await getStaffContext();
+  const { profile } = await getStaffContext();
   const supabase = await createClient();
   const id = str(formData, "id");
   const project_id = str(formData, "project_id");
   const paid = str(formData, "paid") === "true";
+  // Data effettiva scelta nel popup (proposta: oggi); mai nel futuro.
+  const chosen = str(formData, "paid_date");
+  const today = todayInItaly();
+  const paid_at = /^\d{4}-\d{2}-\d{2}$/.test(chosen) && chosen <= today ? chosen : today;
   await supabase
     .from("budget_items")
-    .update({ paid_at: paid ? todayInItaly() : null })
+    .update(
+      paid
+        ? { paid_at, paid_recorded_at: new Date().toISOString(), paid_by: profile.id }
+        : { paid_at: null, paid_recorded_at: null, paid_by: null },
+    )
     .eq("id", id)
     .neq("kind", "conferma_ordine");
   revalidatePath(`/staff/${project_id}`);

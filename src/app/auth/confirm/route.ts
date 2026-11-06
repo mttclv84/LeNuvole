@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import type { NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { logEvent } from "@/lib/data/log-event";
 
 // Riceve i link generati da admin.generateLink (vedi staff/clienti/actions.ts
 // e "password dimenticata" se in futuro verrà aggiunta): verifica il
@@ -17,6 +18,7 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const { error } = await supabase.auth.verifyOtp({ type, token_hash });
     if (!error) {
+      await logEvent(supabase, "link_login");
       redirect(next);
     }
   }

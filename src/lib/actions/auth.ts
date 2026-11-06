@@ -3,9 +3,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logEvent } from "@/lib/data/log-event";
 
 export async function logout() {
   const supabase = await createClient();
+  await logEvent(supabase, "logout");
   await supabase.auth.signOut();
   redirect("/login");
 }
@@ -37,6 +39,7 @@ export async function changePassword(
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  await logEvent(supabase, "password_changed");
   if (user?.app_metadata?.must_change_password) {
     await createAdminClient().auth.admin.updateUserById(user.id, {
       app_metadata: { must_change_password: false },
