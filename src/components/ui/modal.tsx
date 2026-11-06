@@ -15,9 +15,10 @@ export function Modal({
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  // "medium": form con molti campi, disposti su due colonne.
   // "large": per contenuti che hanno bisogno di più spazio per essere
   // leggibili (es. il Gantt), non per i soliti form.
-  size?: "default" | "large";
+  size?: "default" | "medium" | "large";
 }) {
   useEffect(() => {
     if (!open) return;
@@ -35,8 +36,9 @@ export function Modal({
       <button type="button" aria-label="Chiudi" className="fixed inset-0 bg-black/40" onClick={onClose} />
       <div
         className={cn(
-          "relative z-10 flex w-full flex-col rounded-md border border-border bg-card p-6 shadow-lg",
-          size === "large" ? "max-w-5xl max-h-[90vh]" : "max-w-sm",
+          // max-h + scroll interno: il popup non esce mai dallo schermo.
+          "relative z-10 flex max-h-[90vh] w-full flex-col rounded-md border border-border bg-card p-5 shadow-lg",
+          size === "large" ? "max-w-5xl" : size === "medium" ? "max-w-lg" : "max-w-sm",
         )}
       >
         <div className="mb-4 flex shrink-0 items-center justify-between">
@@ -50,7 +52,7 @@ export function Modal({
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className={cn(size === "large" && "overflow-auto")}>{children}</div>
+        <div className="-mx-1 overflow-auto px-1">{children}</div>
       </div>
     </div>
   );
