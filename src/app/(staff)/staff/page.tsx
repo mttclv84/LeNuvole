@@ -23,7 +23,11 @@ export default async function StaffProjectsPage() {
   ]);
 
   const items = (projects ?? []) as Project[];
-  const active = items.filter((p) => !p.is_archived);
+  // Senza data di inizio lavori il cantiere è ancora in fase preparatoria;
+  // appena la data viene inserita passa da solo tra i cantieri attivi.
+  const notArchived = items.filter((p) => !p.is_archived);
+  const preparing = notArchived.filter((p) => !p.work_start_date);
+  const active = notArchived.filter((p) => p.work_start_date);
   const archived = items.filter((p) => p.is_archived);
   const allClients = (clients ?? []) as Profile[];
   // Un cliente può avere più cantieri: si sceglie tra tutti i clienti attivi.
@@ -88,10 +92,16 @@ export default async function StaffProjectsPage() {
       </Card>
 
       <SimpleTabs
+        defaultKey="attivi"
         tabs={[
           {
+            key: "preparatoria",
+            label: `Fase preparatoria (${preparing.length})`,
+            content: <ProjectGrid projects={preparing} clientNameByProjectId={clientNameByProjectId} showDeactivate />,
+          },
+          {
             key: "attivi",
-            label: `Attivi (${active.length})`,
+            label: `Cantieri attivi (${active.length})`,
             content: <ProjectGrid projects={active} clientNameByProjectId={clientNameByProjectId} showDeactivate />,
           },
           {
