@@ -6,7 +6,8 @@ import { revalidatePath } from "next/cache";
 import QRCode from "qrcode";
 import { createClient as createSupabaseServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getStaffContext } from "@/lib/data/staff-context";
+import { getStaffContext, requireAllowed } from "@/lib/data/staff-context";
+import { permissions } from "@/lib/permissions";
 
 function str(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -182,4 +183,23 @@ export async function toggleClientActive(formData: FormData) {
 
   await supabase.from("profiles").update({ active }).eq("id", id);
   revalidatePath("/staff/clienti");
+}
+
+// Eliminazione definitiva di un cliente (solo se già disattivato). Non
+// reversibile: sparisce l'account di accesso e l'anagrafica, e con loro i
+// messaggi chat e i pagamenti dichiarati dal cliente (FK "on delete cascade").
+// I suoi cantieri restano, ma senza cliente ("Cliente da aggiungere").
+export async function deleteClientPermanently(formData: FormData) {
+  const { profile } = await getStaffContext();
+  requireAllowed(permissions.deleteForever(profile.role));
+
+  const id = str(formData, "id");
+  const admin = createAdminClient();
+  // Ruolo e stato si leggono dal database, mai dal form.
+  const { data: target } = await admin.from("profiles").select("role, active").eq("id", id).maybeSingle();
+  if (!target || target.role !== "client" || target.active) return;
+
+  await admin.auth.admin.deleteUser(id);
+  revalidatePath("/staff/clienti");
+  revalidatePath("/staff");
 }

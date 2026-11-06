@@ -1,17 +1,20 @@
-import { Download } from "lucide-react";
+import { Download, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SimpleTabs } from "@/components/simple-tabs";
 import { LiveRefresh } from "@/components/live-refresh";
+import { ConfirmWordDialog } from "@/components/confirm-word-dialog";
 import { getStaffContext } from "@/lib/data/staff-context";
+import { permissions } from "@/lib/permissions";
 import { withEmails } from "@/lib/data/backfill-emails";
 import type { Profile, Project } from "@/lib/types";
 import { CreateClientForm } from "./create-client-form";
 import { EditClientModal } from "./edit-client-modal";
-import { toggleClientActive } from "./actions";
+import { deleteClientPermanently, toggleClientActive } from "./actions";
 
 export default async function ClientiPage() {
-  const { supabase } = await getStaffContext();
+  const { supabase, profile } = await getStaffContext();
+  const canDeleteForever = permissions.deleteForever(profile.role);
 
   const [{ data: clientsData }, { data: projects }] = await Promise.all([
     supabase.from("profiles").select("*").eq("role", "client").order("last_name"),
@@ -93,6 +96,7 @@ export default async function ClientiPage() {
                 clients={deactivated}
                 projectLabelsByClient={projectLabelsByClient}
                 emptyLabel="Nessun cliente disattivato."
+                showDelete={canDeleteForever}
               />
             ),
           },
@@ -106,10 +110,12 @@ function ClientList({
   clients,
   projectLabelsByClient,
   emptyLabel,
+  showDelete,
 }: {
   clients: Profile[];
   projectLabelsByClient: Map<string, string[]>;
   emptyLabel: string;
+  showDelete?: boolean;
 }) {
   return (
     <Card>
@@ -147,6 +153,18 @@ function ClientList({
                       {c.active ? "Disattiva" : "Riattiva"}
                     </button>
                   </form>
+                  {showDelete && !c.active && (
+                    <ConfirmWordDialog
+                      triggerLabel={<Trash2 className="h-4 w-4" />}
+                      triggerAriaLabel="Elimina definitivamente"
+                      triggerClassName="flex h-7 w-7 items-center justify-center rounded-md border border-status-red text-status-red hover:bg-status-red/10"
+                      title="Elimina definitivamente"
+                      description={`Il cliente "${c.display_name}" verrà eliminato per sempre: account di accesso, anagrafica, messaggi in chat e pagamenti dichiarati. I suoi cantieri restano, senza cliente abbinato. L'operazione non è reversibile.`}
+                      word="ELIMINA DEFINITIVAMENTE"
+                      action={deleteClientPermanently}
+                      hiddenFields={{ id: c.id }}
+                    />
+                  )}
                 </div>
               </li>
             ))}
