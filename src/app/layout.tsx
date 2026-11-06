@@ -1,22 +1,28 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { ServiceWorkerRegister } from "@/components/sw-register";
 import "./globals.css";
 
 // Font ufficiale di brand "Metropolis" non disponibile come file (non è su
 // Google Fonts): in attesa dei file reali da Le Nuvole, Plus Jakarta Sans è
 // il sostituto più vicino per forma (geometrico, stessa gamma di pesi
-// Light/SemiBold usata nel manuale). Basta sostituire questo import quando
+// Light/SemiBold usata nel manuale). Basta sostituire questo file quando
 // arrivano i file di Metropolis.
-const brandSans = Plus_Jakarta_Sans({
+// I font sono nel progetto (src/app/fonts, licenza OFL) e non scaricati da
+// Google Fonts in fase di build: su Render quel download falliva e bloccava
+// il deploy ("next/font/google queries have exactly one entry").
+const brandSans = localFont({
+  src: "./fonts/plus-jakarta-sans-latin-wght-normal.woff2",
   variable: "--font-brand-sans",
-  subsets: ["latin"],
-  weight: ["300", "400", "600", "700", "800"],
+  weight: "200 800",
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
+const geistMono = localFont({
+  src: "./fonts/geist-mono-latin-400-normal.woff2",
   variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: "400",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
