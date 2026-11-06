@@ -17,18 +17,13 @@ type StaffActions = {
 // Portafoglio cliente: conferme d'ordine (il conto da pagare) e, sotto, le
 // fatture emesse con lo stato "da saldare" / "SALDATA".
 export function ClientWallet({ items, staff }: { items: BudgetItem[]; staff?: StaffActions }) {
-  const { orders, invoices, orderTotal } = computeWallet(items);
+  const { orders, invoices } = computeWallet(items);
   const today = todayInItaly();
 
   return (
     <div className="flex flex-col gap-5">
       <section>
-        <div className="mb-2 flex items-baseline justify-between gap-3">
-          <p className="text-sm font-medium">Conferme d&apos;ordine</p>
-          <p className="text-sm">
-            Totale da pagare <span className="font-semibold">{formatCurrency(orderTotal)}</span>
-          </p>
-        </div>
+        <p className="mb-2 text-sm font-medium">Conferme d&apos;ordine</p>
         {orders.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nessuna conferma d&apos;ordine ancora.</p>
         ) : (
@@ -118,69 +113,28 @@ export function ClientWallet({ items, staff }: { items: BudgetItem[]; staff?: St
   );
 }
 
-// Storico pagamenti: totali e fatture saldate, dalla più recente.
-export function PaymentsHistory({
-  items,
-  emptyLabel,
-  userNameById,
-}: {
-  items: BudgetItem[];
-  emptyLabel: string;
-  // Solo nel pannello staff: nome dell'utenza che ha registrato il saldo.
-  userNameById?: Map<string, string>;
-}) {
-  const { invoices, orderTotal, invoicedTotal, paidTotal, residual } = computeWallet(items);
-  const paid = invoices
-    .filter((i) => i.paid_at)
-    .sort((a, b) => (b.paid_at ?? "").localeCompare(a.paid_at ?? ""));
+// Storico pagamenti: solo i totali. Le singole registrazioni sono nel
+// Portafoglio cliente, qui non si ripetono.
+export function PaymentsHistory({ items }: { items: BudgetItem[] }) {
+  const { orderTotal, invoicedTotal, paidTotal, residual } = computeWallet(items);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-4 rounded-md bg-muted px-4 py-3 text-sm sm:grid-cols-4">
-        <p>
-          Totale ordine <span className="block font-semibold">{formatCurrency(orderTotal)}</span>
-        </p>
-        <p>
-          Fatturato <span className="block font-semibold">{formatCurrency(invoicedTotal)}</span>
-        </p>
-        <p>
-          Saldato <span className="block font-semibold text-status-green">{formatCurrency(paidTotal)}</span>
-        </p>
-        <p>
-          Residuo{" "}
-          <span className={`block font-semibold ${residual > 0 ? "text-status-orange" : "text-status-green"}`}>
-            {formatCurrency(residual)}
-          </span>
-        </p>
-      </div>
-
-      {paid.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{emptyLabel}</p>
-      ) : (
-        <ul className="flex flex-col divide-y divide-border">
-          {paid.map((p) => (
-            <li key={p.id} className="flex items-center justify-between gap-3 py-2">
-              <div>
-                <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
-                  <Badge variant="green">SALDATA</Badge>
-                  {formatDate(p.paid_at!)}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {BUDGET_KIND_LABEL[p.kind]}
-                  {p.label !== BUDGET_KIND_LABEL[p.kind] && ` · ${p.label}`}
-                </p>
-                {p.paid_recorded_at && (
-                  <p className="text-xs text-muted-foreground">
-                    Registrato il {formatDateTime(p.paid_recorded_at)}
-                    {userNameById && p.paid_by && userNameById.get(p.paid_by) && ` da ${userNameById.get(p.paid_by)}`}
-                  </p>
-                )}
-              </div>
-              <p className="text-sm font-semibold">{formatCurrency(p.amount)}</p>
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className="grid grid-cols-2 gap-4 rounded-md bg-muted px-4 py-3 text-sm sm:grid-cols-4">
+      <p>
+        Totale ordine <span className="block font-semibold">{formatCurrency(orderTotal)}</span>
+      </p>
+      <p>
+        Fatture emesse <span className="block font-semibold">{formatCurrency(invoicedTotal)}</span>
+      </p>
+      <p>
+        Saldato <span className="block font-semibold text-status-green">{formatCurrency(paidTotal)}</span>
+      </p>
+      <p>
+        Residuo{" "}
+        <span className={`block font-semibold ${residual > 0 ? "text-status-orange" : "text-status-green"}`}>
+          {formatCurrency(residual)}
+        </span>
+      </p>
     </div>
   );
 }

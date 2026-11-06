@@ -224,7 +224,7 @@ export default async function ProjectOverviewPage({
           </form>
           <p className="-mt-2 text-xs text-muted-foreground">
             La conferma d&apos;ordine è il totale che il cliente deve pagare. Le fatture compaiono &quot;da saldare&quot;:
-            con l&apos;icona dei soldi diventano &quot;SALDATA&quot; con la data di oggi ed entrano nello storico. Il
+            con l&apos;icona dei soldi diventano &quot;SALDATA&quot; e aggiornano i totali dello storico. Il
             cliente vede tutto, senza poter modificare.
           </p>
           <ClientWallet
@@ -239,7 +239,7 @@ export default async function ProjectOverviewPage({
           <CardTitle>Storico pagamenti</CardTitle>
         </CardHeader>
         <CardContent>
-          <PaymentsHistory items={wallet} emptyLabel="Nessuna fattura saldata ancora." userNameById={staffNameById} />
+          <PaymentsHistory items={wallet} />
         </CardContent>
       </Card>
     </div>

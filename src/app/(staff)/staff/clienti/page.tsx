@@ -79,6 +79,7 @@ export default async function ClientiPage() {
           {
             key: "gestiti",
             label: `Gestiti (${managed.length})`,
+            labelClassName: "text-status-green",
             content: (
               <ClientList
                 clients={managed}

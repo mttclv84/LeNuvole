@@ -98,7 +98,7 @@ export default async function DashboardPage() {
           <CardTitle>Storico pagamenti</CardTitle>
         </CardHeader>
         <CardContent>
-          <PaymentsHistory items={wallet} emptyLabel="Nessun pagamento registrato ancora." />
+          <PaymentsHistory items={wallet} />
         </CardContent>
       </Card>
     </div>
