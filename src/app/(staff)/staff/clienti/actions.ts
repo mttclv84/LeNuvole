@@ -218,23 +218,3 @@ export async function deleteClientPermanently(formData: FormData) {
   revalidatePath("/staff/clienti");
   revalidatePath("/staff");
 }
-
-export type AccessLinkState = { link: string; error?: undefined } | { error: string; link?: undefined };
-
-// Nuovo link di accesso per un cliente esistente (QR scaduto, password
-// dimenticata): qualsiasi utente staff lo genera e lo manda al cliente.
-export async function generateClientAccessLink(clientId: string): Promise<AccessLinkState> {
-  await getStaffContext();
-  const admin = createAdminClient();
-  // Ruolo ed email si leggono dal database, mai dal browser.
-  const { data: target } = await admin.from("profiles").select("role, active").eq("id", clientId).maybeSingle();
-  if (!target || target.role !== "client") return { error: "Cliente non trovato." };
-  if (!target.active) return { error: "Il cliente è disattivato: riattivalo prima di mandargli il link." };
-
-  const { data: authUser } = await admin.auth.admin.getUserById(clientId);
-  const email = authUser?.user?.email;
-  if (!email) return { error: "Il cliente non ha un'email di accesso." };
-
-  const link = await buildAccessLink(admin, email);
-  return link ? { link } : { error: "Non è stato possibile generare il link. Riprova." };
-}

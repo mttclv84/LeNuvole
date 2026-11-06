@@ -2,17 +2,27 @@ import { Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { AutoSubmitSelect } from "@/components/auto-submit-select";
 import { ConfirmWordDialog } from "@/components/confirm-word-dialog";
 import { WorkTimeline } from "@/components/work-timeline";
 import { HouseProgress } from "@/components/house-progress";
 import { LiveRefresh } from "@/components/live-refresh";
+import { ClientWallet, PaymentsHistory } from "@/components/client-wallet";
 import { ProjectStatusForm } from "./project-status-form";
+import { ProjectKeyDataForm } from "./project-key-data-form";
 import { getStaffContext } from "@/lib/data/staff-context";
 import { getStaffProject } from "@/lib/data/staff-project";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import { WORK_ITEM_STATUS_LABEL, computeWorkProgress, type BudgetItem, type Payment, type Profile, type WorkItem } from "@/lib/types";
+import { formatDate } from "@/lib/utils";
+import {
+  BUDGET_KIND_LABEL,
+  WORK_ITEM_STATUS_LABEL,
+  computeWorkProgress,
+  type BudgetItem,
+  type BudgetKind,
+  type Profile,
+  type ProjectKeyDataUnlock,
+  type WorkItem,
+} from "@/lib/types";
 import {
   addBudgetItem,
   addWorkItem,
@@ -20,7 +30,7 @@ import {
   deleteBudgetItem,
   deleteWorkItem,
   reactivateProject,
-  toggleBudgetItemStatus,
+  setInvoicePaid,
   updateWorkItemStatus,
 } from "../actions";
 
@@ -47,12 +57,24 @@ export default async function ProjectOverviewPage({
   const { supabase } = await getStaffContext();
   const project = await getStaffProject(supabase, projectId);
 
-  const [{ data: budgetItems }, { data: workItems }, { data: payments }, { data: clients }] = await Promise.all([
-    supabase.from("budget_items").select("*").eq("project_id", projectId).order("created_at"),
-    supabase.from("work_items").select("*").eq("project_id", projectId).order("start_date"),
-    supabase.from("payments").select("*").eq("project_id", projectId).order("payment_date", { ascending: false }),
-    supabase.from("profiles").select("id, display_name, active").eq("role", "client").order("display_name"),
-  ]);
+  const [{ data: budgetItems }, { data: workItems }, { data: clients }, { data: unlocksData }, { data: staffData }] =
+    await Promise.all([
+      supabase.from("budget_items").select("*").eq("project_id", projectId).order("created_at"),
+      supabase.from("work_items").select("*").eq("project_id", projectId).order("start_date"),
+      supabase.from("profiles").select("id, display_name, active").eq("role", "client").order("display_name"),
+      supabase
+        .from("project_key_data_unlocks")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false }),
+      supabase.from("profiles").select("id, display_name").in("role", ["owner", "staff"]),
+    ]);
+  const staffNameById = new Map(((staffData ?? []) as Pick<Profile, "id" | "display_name">[]).map((p) => [p.id, p.display_name]));
+  const unlocks = ((unlocksData ?? []) as ProjectKeyDataUnlock[]).map((u) => ({
+    ...u,
+    unlocked_by_name: u.unlocked_by ? (staffNameById.get(u.unlocked_by) ?? null) : null,
+  }));
+  const wallet = (budgetItems ?? []) as BudgetItem[];
   // Nel menu: clienti attivi, più quello attuale anche se disattivato.
   const clientOptions = ((clients ?? []) as Pick<Profile, "id" | "display_name" | "active">[]).filter(
     (c) => c.active || c.id === project.client_id,
@@ -60,10 +82,6 @@ export default async function ProjectOverviewPage({
 
   const items = (workItems ?? []) as WorkItem[];
   const progress = computeWorkProgress(items);
-  const confirmedTotal = ((budgetItems ?? []) as BudgetItem[])
-    .filter((i) => i.status === "confirmed")
-    .reduce((sum, i) => sum + i.amount, 0);
-  const paidTotal = ((payments ?? []) as Payment[]).reduce((sum, p) => sum + p.amount, 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -73,7 +91,6 @@ export default async function ProjectOverviewPage({
           { table: "projects", filter: `id=eq.${projectId}` },
           { table: "work_items", filter: `project_id=eq.${projectId}` },
           { table: "budget_items", filter: `project_id=eq.${projectId}` },
-          { table: "payments", filter: `project_id=eq.${projectId}` },
         ]}
       />
       <Card>
@@ -114,45 +131,10 @@ export default async function ProjectOverviewPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Voci budget</CardTitle>
+          <CardTitle>Dati contrattuali</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <form action={addBudgetItem} className="flex flex-wrap items-end gap-2">
-            <input type="hidden" name="project_id" value={projectId} />
-            <Field label="Voce"><Input name="label" required className="w-48" /></Field>
-            <Field label="Importo €"><Input name="amount" type="number" step="0.01" required className="w-32" /></Field>
-            <Field label="Stato">
-              <select name="status" defaultValue="pending" className="h-10 rounded-md border border-border bg-card px-3 text-sm">
-                <option value="pending">Da confermare</option>
-                <option value="confirmed">Confermata</option>
-              </select>
-            </Field>
-            <Button type="submit" size="sm">Aggiungi</Button>
-          </form>
-
-          <ul className="flex flex-col divide-y divide-border">
-            {((budgetItems ?? []) as BudgetItem[]).map((item) => (
-              <li key={item.id} className="flex items-center justify-between gap-3 py-2">
-                <div>
-                  <p className="text-sm font-medium">{item.label}</p>
-                  <p className="text-xs text-muted-foreground">{formatCurrency(item.amount)}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <form action={toggleBudgetItemStatus}>
-                    <input type="hidden" name="id" value={item.id} />
-                    <input type="hidden" name="project_id" value={projectId} />
-                    <input type="hidden" name="status" value={item.status === "confirmed" ? "pending" : "confirmed"} />
-                    <button type="submit">
-                      <Badge variant={item.status === "confirmed" ? "green" : "orange"}>
-                        {item.status === "confirmed" ? "Confermata" : "Da confermare"}
-                      </Badge>
-                    </button>
-                  </form>
-                  <DeleteButton action={deleteBudgetItem} id={item.id} projectId={projectId} />
-                </div>
-              </li>
-            ))}
-          </ul>
+        <CardContent>
+          <ProjectKeyDataForm project={project} unlocks={unlocks} />
         </CardContent>
       </Card>
 
@@ -213,46 +195,43 @@ export default async function ProjectOverviewPage({
 
       <Card>
         <CardHeader>
+          <CardTitle>Portafoglio cliente</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-5">
+          <form action={addBudgetItem} className="flex flex-wrap items-end gap-2">
+            <input type="hidden" name="project_id" value={projectId} />
+            <Field label="Tipo">
+              <select
+                name="kind"
+                defaultValue="conferma_ordine"
+                className="h-10 rounded-md border border-border bg-card px-3 text-sm"
+              >
+                {(Object.keys(BUDGET_KIND_LABEL) as BudgetKind[]).map((k) => (
+                  <option key={k} value={k}>
+                    {BUDGET_KIND_LABEL[k]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Descrizione (facoltativa)"><Input name="label" className="w-48" /></Field>
+            <Field label="Importo €"><Input name="amount" type="number" step="0.01" min="0.01" required className="w-32" /></Field>
+            <Button type="submit" size="sm">Aggiungi</Button>
+          </form>
+          <p className="-mt-2 text-xs text-muted-foreground">
+            La conferma d&apos;ordine è il totale che il cliente deve pagare. Le fatture compaiono &quot;da saldare&quot;:
+            con l&apos;icona dei soldi diventano &quot;SALDATA&quot; con la data di oggi ed entrano nello storico. Il
+            cliente vede tutto, senza poter modificare.
+          </p>
+          <ClientWallet items={wallet} staff={{ projectId, setInvoicePaid, deleteItem: deleteBudgetItem }} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Storico pagamenti</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-wrap gap-6 rounded-md bg-muted px-4 py-3 text-sm">
-            <p>
-              Totale confermato <span className="block font-semibold">{formatCurrency(confirmedTotal)}</span>
-            </p>
-            <p>
-              Pagato <span className="block font-semibold text-status-green">{formatCurrency(paidTotal)}</span>
-            </p>
-            <p>
-              Residuo{" "}
-              <span
-                className={`block font-semibold ${confirmedTotal - paidTotal > 0 ? "text-status-orange" : "text-status-green"}`}
-              >
-                {formatCurrency(confirmedTotal - paidTotal)}
-              </span>
-            </p>
-          </div>
-
-          {((payments ?? []) as Payment[]).length === 0 ? (
-            <p className="text-sm text-muted-foreground">Il cliente non ha ancora registrato pagamenti.</p>
-          ) : (
-            <ul className="flex flex-col divide-y divide-border">
-              {((payments ?? []) as Payment[]).map((p) => (
-                <li key={p.id} className="flex items-center justify-between gap-3 py-2">
-                  <div>
-                    <p className="flex items-center gap-2 text-sm font-medium">
-                      <Badge variant={p.type === "saldo" ? "accent" : "default"}>
-                        {p.type === "saldo" ? "Saldo" : "Acconto"}
-                      </Badge>
-                      {formatDate(p.payment_date)}
-                    </p>
-                    {p.comment && <p className="mt-1 text-xs text-muted-foreground">{p.comment}</p>}
-                  </div>
-                  <p className="text-sm font-semibold">{formatCurrency(p.amount)}</p>
-                </li>
-              ))}
-            </ul>
-          )}
+        <CardContent>
+          <PaymentsHistory items={wallet} emptyLabel="Nessuna fattura saldata ancora." />
         </CardContent>
       </Card>
     </div>

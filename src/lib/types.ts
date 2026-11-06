@@ -4,6 +4,8 @@
 export type UserRole = "owner" | "staff" | "client";
 export type StatusLight = "green" | "orange" | "red";
 export type BudgetStatus = "confirmed" | "pending";
+// Tipo di voce del Portafoglio cliente (migration 0014).
+export type BudgetKind = "conferma_ordine" | "fattura_acconto" | "fattura_avanzamento" | "fattura_saldo";
 export type WorkItemStatus = "planned" | "in_progress" | "postponed" | "cancelled" | "done";
 export type MediaType = "photo" | "drawing" | "render";
 export type DocumentCategory = "crew" | "manual" | "order_confirmation" | "other";
@@ -46,6 +48,17 @@ export interface Project {
   // Cliente del cantiere: un cliente può avere più cantieri, un cantiere un
   // solo cliente (migration 0012).
   client_id: string | null;
+  // Colore Gantt + data firma + data inizio salvati e bloccati: si
+  // modificano solo dopo uno sblocco con giustificativo (migration 0014).
+  key_data_locked_at: string | null;
+}
+
+export interface ProjectKeyDataUnlock {
+  id: string;
+  project_id: string;
+  reason: string;
+  unlocked_by: string | null;
+  created_at: string;
 }
 
 // Ore previste del cantiere (sezione Timing). Esiste solo dopo il primo
@@ -65,8 +78,31 @@ export interface BudgetItem {
   project_id: string;
   label: string;
   amount: number;
+  // Colonna storica, non più usata dal Portafoglio cliente.
   status: BudgetStatus;
+  kind: BudgetKind;
+  // Solo fatture: data in cui lo staff l'ha segnata come saldata.
+  paid_at: string | null;
   created_at: string;
+}
+
+export const BUDGET_KIND_LABEL: Record<BudgetKind, string> = {
+  conferma_ordine: "Conferma d'ordine",
+  fattura_acconto: "Fattura acconto",
+  fattura_avanzamento: "Fattura avanzamento",
+  fattura_saldo: "Fattura saldo lavori",
+};
+
+export const isInvoice = (item: Pick<BudgetItem, "kind">) => item.kind !== "conferma_ordine";
+
+// Totali del Portafoglio cliente, uguali per staff e cliente.
+export function computeWallet(items: BudgetItem[]) {
+  const orders = items.filter((i) => !isInvoice(i));
+  const invoices = items.filter(isInvoice);
+  const orderTotal = orders.reduce((sum, i) => sum + i.amount, 0);
+  const invoicedTotal = invoices.reduce((sum, i) => sum + i.amount, 0);
+  const paidTotal = invoices.filter((i) => i.paid_at).reduce((sum, i) => sum + i.amount, 0);
+  return { orders, invoices, orderTotal, invoicedTotal, paidTotal, residual: orderTotal - paidTotal };
 }
 
 export interface WorkItem {

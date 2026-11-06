@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getStaffContext } from "@/lib/data/staff-context";
 import { permissions } from "@/lib/permissions";
 import { safeFileName } from "@/lib/utils";
+import { BUDGET_KIND_LABEL, type BudgetKind } from "@/lib/types";
 
 const BUCKET = "project-files";
 
@@ -58,19 +59,14 @@ export async function updateProjectStatus(
   const projectId = str(formData, "project_id");
   const status_light = str(formData, "status_light");
   const status_reason = str(formData, "status_reason");
-  const contract_signed_date = str(formData, "contract_signed_date");
-  const work_start_date = str(formData, "work_start_date");
-  const color = str(formData, "color");
   const client_id = str(formData, "client_id");
 
+  // Colore Gantt e date contrattuali hanno un form a parte (saveProjectKeyData).
   const { error } = await supabase
     .from("projects")
     .update({
       status_light,
       status_reason: status_reason || null,
-      contract_signed_date: contract_signed_date || null,
-      work_start_date: work_start_date || null,
-      ...(color && { color }),
       ...(client_id && { client_id }),
     })
     .eq("id", projectId);
@@ -82,6 +78,55 @@ export async function updateProjectStatus(
   if (error) {
     return { error: "Non è stato possibile salvare le modifiche." };
   }
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------------
+// Dati contrattuali: colore Gantt, data firma contratto, data inizio lavori.
+// Salvati tutti e tre restano bloccati; si sbloccano solo con un
+// giustificativo (registrato), poi si salvano di nuovo. Il blocco è difeso
+// anche dal database (trigger check_project_key_data_lock, migration 0014).
+// ---------------------------------------------------------------------------
+
+export type KeyDataState = { error?: string; success?: boolean } | undefined;
+
+export async function saveProjectKeyData(_prev: KeyDataState, formData: FormData): Promise<KeyDataState> {
+  await getStaffContext();
+  const supabase = await createClient();
+  const projectId = str(formData, "project_id");
+  const color = str(formData, "color");
+  const contract_signed_date = str(formData, "contract_signed_date");
+  const work_start_date = str(formData, "work_start_date");
+
+  const complete = Boolean(color && contract_signed_date && work_start_date);
+  const { error } = await supabase
+    .from("projects")
+    .update({
+      ...(color && { color }),
+      contract_signed_date: contract_signed_date || null,
+      work_start_date: work_start_date || null,
+      key_data_locked_at: complete ? new Date().toISOString() : null,
+    })
+    .eq("id", projectId);
+
+  revalidatePath(`/staff/${projectId}`);
+  revalidatePath("/staff");
+  if (error) {
+    return { error: "Non è stato possibile salvare: i dati potrebbero essere bloccati, ricarica la pagina." };
+  }
+  return { success: true };
+}
+
+export async function unlockProjectKeyData(_prev: KeyDataState, formData: FormData): Promise<KeyDataState> {
+  await getStaffContext();
+  const supabase = await createClient();
+  const projectId = str(formData, "project_id");
+  const reason = str(formData, "reason");
+  if (!reason) return { error: "Scrivi il motivo dello sblocco." };
+
+  const { error } = await supabase.rpc("unlock_project_key_data", { p_project_id: projectId, p_reason: reason });
+  revalidatePath(`/staff/${projectId}`);
+  if (error) return { error: "Non è stato possibile sbloccare i dati." };
   return { success: true };
 }
 
@@ -131,26 +176,40 @@ export async function deleteProjectPermanently(formData: FormData) {
 // Budget
 // ---------------------------------------------------------------------------
 
+// Portafoglio cliente: conferme d'ordine (il conto da pagare) e fatture
+// (da saldare / saldate). Le modifica solo lo staff, il cliente le vede.
+const BUDGET_KINDS: BudgetKind[] = ["conferma_ordine", "fattura_acconto", "fattura_avanzamento", "fattura_saldo"];
+
+// Data di oggi in Italia (YYYY-MM-DD), anche se il server gira in UTC.
+function todayInItaly() {
+  return new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Rome" });
+}
+
 export async function addBudgetItem(formData: FormData) {
   await getStaffContext();
   const supabase = await createClient();
   const project_id = str(formData, "project_id");
-  const label = str(formData, "label");
-  const amount = Number(str(formData, "amount"));
-  const status = str(formData, "status") || "pending";
-  if (!label || Number.isNaN(amount)) return;
+  const kind = str(formData, "kind") as BudgetKind;
+  const amount = Number(str(formData, "amount").replace(",", "."));
+  if (!BUDGET_KINDS.includes(kind) || !amount || Number.isNaN(amount)) return;
+  // La descrizione è facoltativa: senza, vale il nome del tipo.
+  const label = str(formData, "label") || BUDGET_KIND_LABEL[kind];
 
-  await supabase.from("budget_items").insert({ project_id, label, amount, status });
+  await supabase.from("budget_items").insert({ project_id, kind, label, amount, status: "confirmed" });
   revalidatePath(`/staff/${project_id}`);
 }
 
-export async function toggleBudgetItemStatus(formData: FormData) {
+export async function setInvoicePaid(formData: FormData) {
   await getStaffContext();
   const supabase = await createClient();
   const id = str(formData, "id");
   const project_id = str(formData, "project_id");
-  const status = str(formData, "status");
-  await supabase.from("budget_items").update({ status }).eq("id", id);
+  const paid = str(formData, "paid") === "true";
+  await supabase
+    .from("budget_items")
+    .update({ paid_at: paid ? todayInItaly() : null })
+    .eq("id", id)
+    .neq("kind", "conferma_ordine");
   revalidatePath(`/staff/${project_id}`);
 }
 

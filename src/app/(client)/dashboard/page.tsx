@@ -6,27 +6,25 @@ import { HouseProgress } from "@/components/house-progress";
 import { WorkTimeline } from "@/components/work-timeline";
 import type { GanttRow } from "@/components/gantt-chart";
 import { GanttPopup } from "@/components/gantt-popup";
-import { BudgetSummary } from "@/components/budget-summary";
-import { PaymentFormModal } from "@/components/payment-form-modal";
+import { ClientWallet, PaymentsHistory } from "@/components/client-wallet";
 import { getClientContext } from "@/lib/data/client-context";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import {
   WORK_ITEM_STATUS_LABEL,
   computeWorkProgress,
   workItemStatusColor,
   type BudgetItem,
-  type Payment,
   type WorkItem,
 } from "@/lib/types";
 
 export default async function DashboardPage() {
   const { supabase, project } = await getClientContext();
 
-  const [{ data: workItems }, { data: budgetItems }, { data: payments }] = await Promise.all([
+  const [{ data: workItems }, { data: budgetItems }] = await Promise.all([
     supabase.from("work_items").select("*").eq("project_id", project.id).order("start_date"),
     supabase.from("budget_items").select("*").eq("project_id", project.id).order("created_at"),
-    supabase.from("payments").select("*").eq("project_id", project.id).order("payment_date", { ascending: false }),
   ]);
+  const wallet = (budgetItems ?? []) as BudgetItem[];
 
   const items = (workItems ?? []) as WorkItem[];
   const progress = computeWorkProgress(items);
@@ -39,10 +37,6 @@ export default async function DashboardPage() {
       endDate: item.end_date,
       status: item.status,
     }));
-  const confirmedTotal = ((budgetItems ?? []) as BudgetItem[])
-    .filter((i) => i.status === "confirmed")
-    .reduce((sum, i) => sum + i.amount, 0);
-  const paidTotal = ((payments ?? []) as Payment[]).reduce((sum, p) => sum + p.amount, 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -52,7 +46,6 @@ export default async function DashboardPage() {
           { table: "projects", filter: `id=eq.${project.id}` },
           { table: "work_items", filter: `project_id=eq.${project.id}` },
           { table: "budget_items", filter: `project_id=eq.${project.id}` },
-          { table: "payments", filter: `project_id=eq.${project.id}` },
         ]}
       />
       <div className="grid gap-6 sm:grid-cols-[1fr_auto]">
@@ -92,12 +85,11 @@ export default async function DashboardPage() {
       </Card>
 
       <Card>
-        <CardHeader className="flex-row items-center justify-between">
-          <CardTitle>Voci budget</CardTitle>
-          <PaymentFormModal />
+        <CardHeader>
+          <CardTitle>Portafoglio cliente</CardTitle>
         </CardHeader>
         <CardContent>
-          <BudgetSummary items={(budgetItems ?? []) as BudgetItem[]} />
+          <ClientWallet items={wallet} />
         </CardContent>
       </Card>
 
@@ -105,49 +97,11 @@ export default async function DashboardPage() {
         <CardHeader>
           <CardTitle>Storico pagamenti</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-wrap gap-6 rounded-md bg-muted px-4 py-3 text-sm">
-            <p>
-              Totale confermato <span className="block font-semibold">{formatCurrency(confirmedTotal)}</span>
-            </p>
-            <p>
-              Pagato <span className="block font-semibold text-status-green">{formatCurrency(paidTotal)}</span>
-            </p>
-            <p>
-              Residuo{" "}
-              <span
-                className={`block font-semibold ${confirmedTotal - paidTotal > 0 ? "text-status-orange" : "text-status-green"}`}
-              >
-                {formatCurrency(confirmedTotal - paidTotal)}
-              </span>
-            </p>
-          </div>
-          <PaymentsList payments={(payments ?? []) as Payment[]} />
+        <CardContent>
+          <PaymentsHistory items={wallet} emptyLabel="Nessun pagamento registrato ancora." />
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-function PaymentsList({ payments }: { payments: Payment[] }) {
-  if (payments.length === 0) {
-    return <p className="text-sm text-muted-foreground">Non hai ancora registrato pagamenti.</p>;
-  }
-  return (
-    <ul className="flex flex-col divide-y divide-border">
-      {payments.map((p) => (
-        <li key={p.id} className="flex items-center justify-between gap-3 py-2">
-          <div>
-            <p className="flex items-center gap-2 text-sm font-medium">
-              <Badge variant={p.type === "saldo" ? "accent" : "default"}>{p.type === "saldo" ? "Saldo" : "Acconto"}</Badge>
-              {formatDate(p.payment_date)}
-            </p>
-            {p.comment && <p className="mt-1 text-xs text-muted-foreground">{p.comment}</p>}
-          </div>
-          <p className="text-sm font-semibold">{formatCurrency(p.amount)}</p>
-        </li>
-      ))}
-    </ul>
   );
 }
 

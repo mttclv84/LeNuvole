@@ -7,7 +7,8 @@ import type { AuditLogEntry } from "@/lib/types";
 
 const TABLE_LABEL: Record<string, string> = {
   projects: "Cantiere",
-  budget_items: "Budget",
+  budget_items: "Portafoglio cliente",
+  project_key_data_unlocks: "Sblocco dati contrattuali",
   work_items: "Lavorazione",
   timeline_steps: "Timeline",
   media: "Foto/Media",

@@ -1,11 +1,11 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
-import { Check, Copy, Link2, Pencil } from "lucide-react";
+import { useActionState, useState } from "react";
+import { Check, Link2, Pencil } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
-import { generateClientAccessLink, updateClientRecord, type UpdateClientState } from "./actions";
+import { updateClientRecord, type UpdateClientState } from "./actions";
 import type { Profile } from "@/lib/types";
 
 // I cantieri del cliente si abbinano dal cantiere (Cantieri → Stato lavori → Cliente).
@@ -13,12 +13,14 @@ export function EditClientModal({ client }: { client: Profile }) {
   const [open, setOpen] = useState(false);
   const [showPasswordField, setShowPasswordField] = useState(false);
   const [state, formAction, pending] = useActionState<UpdateClientState, FormData>(updateClientRecord, undefined);
-  const [accessLink, setAccessLink] = useState<string | null>(null);
-  const [linkError, setLinkError] = useState<string | null>(null);
+  const [loginLink, setLoginLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [linkPending, startLinkTransition] = useTransition();
 
-  async function copyLink(link: string) {
+  // Link alla pagina di accesso del portale (email + password): non scade e
+  // vale per tutti, si manda al cliente insieme alla password temporanea.
+  async function copyLoginLink() {
+    const link = `${window.location.origin}/login`;
+    setLoginLink(link);
     try {
       await navigator.clipboard.writeText(link);
       setCopied(true);
@@ -26,22 +28,6 @@ export function EditClientModal({ client }: { client: Profile }) {
       // Appunti non disponibili: il link resta visibile nel campo, si copia a mano.
       setCopied(false);
     }
-  }
-
-  function createAccessLink() {
-    setLinkError(null);
-    setCopied(false);
-    startLinkTransition(async () => {
-      const result = await generateClientAccessLink(client.id);
-      const link = result.link;
-      if (!link) {
-        setAccessLink(null);
-        setLinkError(result.error ?? "Non è stato possibile generare il link.");
-        return;
-      }
-      setAccessLink(link);
-      await copyLink(link);
-    });
   }
 
   // Vedi payment-form-modal.tsx: si evita l'useEffect, si aggiorna durante il render.
@@ -95,60 +81,49 @@ export function EditClientModal({ client }: { client: Profile }) {
           </div>
           <div className="flex flex-col gap-1">
             <Label>Password</Label>
-            {showPasswordField ? (
-              <Input
-                name="new_password"
-                type="text"
-                placeholder="Nuova password (min 8 caratteri)"
-                minLength={8}
-                autoFocus
-              />
-            ) : (
-              <div className="flex items-center gap-2">
-                <Input value="••••••••" disabled className="text-muted-foreground" />
-                <button
-                  type="button"
-                  onClick={() => setShowPasswordField(true)}
-                  className="shrink-0 whitespace-nowrap text-xs text-accent hover:underline"
-                >
-                  Imposta nuova password
-                </button>
-                <button
-                  type="button"
-                  onClick={createAccessLink}
-                  disabled={linkPending}
-                  title="Crea link di accesso da mandare al cliente"
-                  aria-label="Crea link di accesso da mandare al cliente"
-                  className="shrink-0 rounded-md border border-border p-1.5 text-accent hover:bg-muted disabled:opacity-50"
-                >
-                  <Link2 className="h-4 w-4" />
-                </button>
-              </div>
-            )}
-            {linkPending && <p className="text-xs text-muted-foreground">Creo il link…</p>}
-            {linkError && <p className="text-xs text-status-red">{linkError}</p>}
-            {accessLink && !linkPending && (
-              <div className="flex flex-col gap-1.5 rounded-md border border-border bg-muted p-2">
-                <div className="flex items-center gap-2">
-                  <Input value={accessLink} readOnly onFocus={(e) => e.currentTarget.select()} className="text-xs" />
+            <div className="flex items-center gap-2">
+              {showPasswordField ? (
+                <Input
+                  name="new_password"
+                  type="text"
+                  placeholder="Nuova password (min 8 caratteri)"
+                  minLength={8}
+                  autoFocus
+                />
+              ) : (
+                <>
+                  <Input value="••••••••" disabled className="text-muted-foreground" />
                   <button
                     type="button"
-                    onClick={() => copyLink(accessLink)}
-                    aria-label="Copia link"
-                    className="shrink-0 rounded-md border border-border bg-card p-1.5 hover:bg-muted"
+                    onClick={() => setShowPasswordField(true)}
+                    className="shrink-0 whitespace-nowrap text-xs text-accent hover:underline"
                   >
-                    {copied ? <Check className="h-4 w-4 text-status-green" /> : <Copy className="h-4 w-4" />}
+                    Imposta nuova password
                   </button>
-                </div>
+                </>
+              )}
+              <button
+                type="button"
+                onClick={copyLoginLink}
+                title="Copia il link alla pagina di accesso"
+                aria-label="Copia il link alla pagina di accesso"
+                className="shrink-0 rounded-md border border-border p-1.5 text-accent hover:bg-muted"
+              >
+                {copied ? <Check className="h-4 w-4 text-status-green" /> : <Link2 className="h-4 w-4" />}
+              </button>
+            </div>
+            {loginLink && (
+              <div className="flex flex-col gap-1 rounded-md border border-border bg-muted p-2">
+                <Input value={loginLink} readOnly onFocus={(e) => e.currentTarget.select()} className="text-xs" />
                 <p className="text-xs text-muted-foreground">
-                  {copied ? "Link copiato. " : ""}Mandalo al cliente (WhatsApp, email): aprendolo sceglie da solo la
-                  sua password ed entra nel portale. Vale una volta sola e scade dopo circa 1 ora.
+                  {copied ? "Link copiato. " : ""}Mandalo al cliente con la sua email e la password: lo porta alla
+                  pagina di accesso del portale.
                 </p>
               </div>
             )}
             <p className="text-xs text-muted-foreground">
               La password attuale non è visibile (è cifrata). Una nuova password impostata qui è temporanea: al primo
-              accesso il cliente ne sceglie una sua. Con l&apos;icona del link crei invece un link da mandargli.
+              accesso il cliente ne sceglie una sua.
             </p>
           </div>
           {state?.error && <p className="text-sm text-status-red">{state.error}</p>}
