@@ -7,7 +7,7 @@ import { ConfirmWordDialog } from "@/components/confirm-word-dialog";
 import { getStaffContext } from "@/lib/data/staff-context";
 import { permissions } from "@/lib/permissions";
 import { withEmails } from "@/lib/data/backfill-emails";
-import type { Profile, Project } from "@/lib/types";
+import { LEAD_SOURCE_LABEL, type Profile, type Project } from "@/lib/types";
 import { CreateClientForm } from "./create-client-form";
 import { EditClientModal } from "./edit-client-modal";
 import { deleteClientPermanently, toggleClientActive } from "./actions";
@@ -134,6 +134,14 @@ function ClientList({
                     {c.phone && ` · ${c.phone}`}
                   </p>
                   {c.address && <p className="text-xs text-muted-foreground">{c.address}</p>}
+                  <p className="text-xs text-muted-foreground">
+                    Aggancio:{" "}
+                    {c.lead_source ? (
+                      <span className="text-foreground">{LEAD_SOURCE_LABEL[c.lead_source]}</span>
+                    ) : (
+                      <span className="italic">da indicare</span>
+                    )}
+                  </p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {(projectLabelsByClient.get(c.id)?.length ?? 0) > 1 ? "Cantieri" : "Cantiere"}:{" "}
                     {projectLabelsByClient.has(c.id) ? (

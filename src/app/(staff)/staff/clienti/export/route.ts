@@ -1,6 +1,6 @@
 import { getStaffContext } from "@/lib/data/staff-context";
 import { withEmails } from "@/lib/data/backfill-emails";
-import type { Profile, Project } from "@/lib/types";
+import { LEAD_SOURCE_LABEL, type Profile, type Project } from "@/lib/types";
 
 // Esportazione CSV (non un vero .xlsx) per non introdurre una dipendenza di
 // terze parti solo per generare un file Excel: le librerie disponibili per
@@ -31,12 +31,13 @@ export async function GET() {
     if (p.client_id) projectLabelsByClient.set(p.client_id, [...(projectLabelsByClient.get(p.client_id) ?? []), p.client_label]);
   }
 
-  const header = ["Nome", "Email", "Telefono", "Indirizzo", "Cantieri", "Stato", "Note"];
+  const header = ["Nome", "Email", "Telefono", "Indirizzo", "Aggancio", "Cantieri", "Stato", "Note"];
   const rows = clients.map((c) => [
     csvCell(c.display_name ?? ""),
     csvCell(c.email ?? ""),
     c.phone ? csvPhone(c.phone) : csvCell(""),
     csvCell(c.address ?? ""),
+    csvCell(c.lead_source ? LEAD_SOURCE_LABEL[c.lead_source] : ""),
     csvCell((projectLabelsByClient.get(c.id) ?? []).join(", ")),
     csvCell(c.active ? "Attivo" : "Disattivato"),
     csvCell(c.notes ?? ""),

@@ -9,6 +9,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getStaffContext, requireAllowed } from "@/lib/data/staff-context";
 import { permissions } from "@/lib/permissions";
 import { logEvent } from "@/lib/data/log-event";
+import { isLeadSource } from "@/lib/types";
 
 function str(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -63,6 +64,10 @@ export async function createClientRecord(
   if (!first_name || !last_name || !email) {
     return { error: "Nome, cognome ed email sono obbligatori." };
   }
+  const lead_source = str(formData, "lead_source");
+  if (!isLeadSource(lead_source)) {
+    return { error: "Scegli l'aggancio del cliente." };
+  }
 
   const admin = createAdminClient();
 
@@ -95,6 +100,7 @@ export async function createClientRecord(
     phone: phone || null,
     address: address || null,
     notes: notes || null,
+    lead_source,
   });
   if (profileError) {
     return { error: "Account creato ma la scheda cliente non è stata salvata: contattare l'assistenza." };
@@ -149,6 +155,10 @@ export async function updateClientRecord(
   if (!first_name || !last_name || !email) {
     return { error: "Nome, cognome ed email sono obbligatori." };
   }
+  const lead_source = str(formData, "lead_source");
+  if (!isLeadSource(lead_source)) {
+    return { error: "Scegli l'aggancio del cliente." };
+  }
   if (new_password && new_password.length < 8) {
     return { error: "La nuova password deve avere almeno 8 caratteri." };
   }
@@ -186,6 +196,7 @@ export async function updateClientRecord(
       phone: phone || null,
       address: address || null,
       notes: notes || null,
+      lead_source,
     })
     .eq("id", id);
 

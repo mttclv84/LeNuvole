@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { updateClientRecord, type UpdateClientState } from "./actions";
 import type { Profile } from "@/lib/types";
+import { LeadSourceSelect } from "./lead-source-select";
 
 // I cantieri del cliente si abbinano dal cantiere (Cantieri → Stato lavori → Cliente).
 export function EditClientModal({ client }: { client: Profile }) {
@@ -71,9 +72,15 @@ export function EditClientModal({ client }: { client: Profile }) {
               <Input id={`phone-${client.id}`} name="phone" type="tel" defaultValue={client.phone ?? ""} />
             </div>
           </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor={`address-${client.id}`}>Indirizzo</Label>
-            <Input id={`address-${client.id}`} name="address" defaultValue={client.address ?? ""} />
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor={`address-${client.id}`}>Indirizzo</Label>
+              <Input id={`address-${client.id}`} name="address" defaultValue={client.address ?? ""} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor={`lead_source-${client.id}`}>Aggancio</Label>
+              <LeadSourceSelect id={`lead_source-${client.id}`} defaultValue={client.lead_source} className="w-full sm:w-40" />
+            </div>
           </div>
           <div className="flex flex-col gap-1">
             <Label htmlFor={`notes-${client.id}`}>Commenti</Label>

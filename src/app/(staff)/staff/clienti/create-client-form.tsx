@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { createClientRecord, type CreateClientState } from "./actions";
 import type { Project } from "@/lib/types";
+import { LeadSourceSelect } from "./lead-source-select";
 
 export function CreateClientForm({ projects }: { projects: Project[] }) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -51,6 +52,10 @@ export function CreateClientForm({ projects }: { projects: Project[] }) {
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="address">Indirizzo</Label>
             <Input id="address" name="address" className="w-64" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="lead_source">Aggancio</Label>
+            <LeadSourceSelect id="lead_source" className="w-44" />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="project_id">Cantiere (facoltativo)</Label>

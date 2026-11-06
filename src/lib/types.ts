@@ -27,7 +27,25 @@ export interface Profile {
   phone: string | null;
   address: string | null;
   notes: string | null;
+  // "Aggancio": come il cliente è arrivato a Le Nuvole (migration 0018).
+  lead_source: LeadSource | null;
 }
+
+export const LEAD_SOURCE_LABEL = {
+  passaparola: "Passaparola",
+  online: "Online",
+  social: "Social",
+  giornale: "Giornale",
+  cartellone: "Cartellone",
+  fiera: "Fiera",
+  volantino: "Volantino",
+  evento: "Evento",
+  professionista: "Professionista",
+} as const;
+
+export type LeadSource = keyof typeof LEAD_SOURCE_LABEL;
+
+export const isLeadSource = (value: string): value is LeadSource => value in LEAD_SOURCE_LABEL;
 
 export interface Project {
   id: string;
