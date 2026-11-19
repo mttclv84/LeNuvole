@@ -215,13 +215,25 @@ export async function updateClientRecord(
   return { success: true };
 }
 
+// Disattivazione: la motivazione è obbligatoria e viene salvata sul cliente
+// (deactivation_reason/deactivated_at, migration 0019) e nei Logs.
+// Riattivazione: i due campi tornano vuoti.
 export async function toggleClientActive(formData: FormData) {
   await getStaffContext();
   const supabase = await createSupabaseServerClient();
   const id = str(formData, "id");
   const active = str(formData, "active") === "true";
+  const reason = str(formData, "reason").slice(0, 500);
+  if (!active && reason.length < 3) return;
 
-  await supabase.from("profiles").update({ active }).eq("id", id);
+  await supabase
+    .from("profiles")
+    .update(
+      active
+        ? { active, deactivation_reason: null, deactivated_at: null }
+        : { active, deactivation_reason: reason, deactivated_at: new Date().toISOString() },
+    )
+    .eq("id", id);
   revalidatePath("/staff/clienti");
 }
 

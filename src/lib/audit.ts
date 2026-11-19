@@ -151,5 +151,9 @@ export function auditEntryNote(entry: AuditLogEntry): string | null {
   if (entry.table_name === "project_key_data_unlocks" && typeof d.reason === "string") return d.reason;
   // Motivazione di un'eliminazione (es. voce del portafoglio, migration 0017).
   if (typeof d._reason === "string") return d._reason;
+  // Motivazione della disattivazione di un cliente (migration 0019).
+  if (entry.table_name === "profiles" && d.active === false && typeof d.deactivation_reason === "string") {
+    return d.deactivation_reason;
+  }
   return null;
 }

@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { SimpleTabs } from "@/components/simple-tabs";
 import { LiveRefresh } from "@/components/live-refresh";
 import { ConfirmWordDialog } from "@/components/confirm-word-dialog";
+import { DeactivateClientDialog } from "@/components/deactivate-client-dialog";
+import { formatDate } from "@/lib/utils";
 import { getStaffContext } from "@/lib/data/staff-context";
 import { permissions } from "@/lib/permissions";
 import { withEmails } from "@/lib/data/backfill-emails";
@@ -68,8 +70,8 @@ export default async function ClientiPage() {
           {
             key: "gestiti",
             label: `Attivi (${managed.length})`,
-            // Sfondo nero fisso per far risaltare il verde.
-            labelClassName: "bg-brand-black text-status-green hover:bg-brand-black hover:text-status-green",
+            // Sfondo verde fisso, testo bianco.
+            labelClassName: "raised bg-status-green text-white hover:bg-status-green hover:text-white",
             content: (
               <ClientList
                 clients={managed}
@@ -152,17 +154,26 @@ function ClientList({
                     )}
                   </p>
                   {c.notes && <p className="mt-1 text-xs italic text-muted-foreground">{c.notes}</p>}
+                  {!c.active && c.deactivation_reason && (
+                    <p className="mt-1 text-xs text-status-red">
+                      Disattivato{c.deactivated_at && ` il ${formatDate(c.deactivated_at)}`}: {c.deactivation_reason}
+                    </p>
+                  )}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <Badge variant={c.active ? "green" : "red"}>{c.active ? "Attivo" : "Disattivato"}</Badge>
                   <EditClientModal client={c} />
-                  <form action={toggleClientActive}>
-                    <input type="hidden" name="id" value={c.id} />
-                    <input type="hidden" name="active" value={(!c.active).toString()} />
-                    <button type="submit" className="rounded-md border border-border px-2.5 py-1 text-xs hover:bg-muted">
-                      {c.active ? "Disattiva" : "Riattiva"}
-                    </button>
-                  </form>
+                  {c.active ? (
+                    <DeactivateClientDialog clientId={c.id} clientName={c.display_name} action={toggleClientActive} />
+                  ) : (
+                    <form action={toggleClientActive}>
+                      <input type="hidden" name="id" value={c.id} />
+                      <input type="hidden" name="active" value="true" />
+                      <button type="submit" className="rounded-md border border-border px-2.5 py-1 text-xs hover:bg-muted">
+                        Riattiva
+                      </button>
+                    </form>
+                  )}
                   {showDelete && !c.active && (
                     <ConfirmWordDialog
                       triggerLabel={<Trash2 className="h-4 w-4" />}

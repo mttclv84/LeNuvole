@@ -29,6 +29,9 @@ export interface Profile {
   notes: string | null;
   // "Aggancio": come il cliente è arrivato a Le Nuvole (migration 0018).
   lead_source: LeadSource | null;
+  // Motivazione e data della disattivazione (migration 0019).
+  deactivation_reason?: string | null;
+  deactivated_at?: string | null;
 }
 
 export const LEAD_SOURCE_LABEL = {
