@@ -33,11 +33,11 @@ export function Modal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button type="button" aria-label="Chiudi" className="fixed inset-0 bg-black/40" onClick={onClose} />
+      <button type="button" aria-label="Chiudi" className="fixed inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
       <div
         className={cn(
           // max-h + scroll interno: il popup non esce mai dallo schermo.
-          "relative z-10 flex max-h-[90vh] w-full flex-col rounded-md border border-border bg-card p-5 shadow-lg",
+          "relative z-10 flex max-h-[90vh] w-full flex-col rounded-md border border-border/70 bg-card p-5 shadow-elev-3",
           size === "large" ? "max-w-5xl" : size === "medium" ? "max-w-lg" : "max-w-sm",
         )}
       >

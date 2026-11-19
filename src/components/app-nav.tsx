@@ -36,7 +36,7 @@ export function AppNav({ links }: { links: NavLink[] }) {
   const pathname = usePathname();
 
   return (
-    <nav className="flex gap-1 overflow-x-auto border-b border-border bg-card px-2 sm:flex-col sm:gap-0.5 sm:overflow-visible sm:border-b-0 sm:border-r sm:p-2">
+    <nav className="flex gap-1 overflow-x-auto border-b border-border/70 bg-card px-2 py-1.5 shadow-elev-1 sm:sticky sm:top-0 sm:h-screen sm:flex-col sm:gap-1 sm:overflow-y-auto sm:border-b-0 sm:border-r sm:p-3">
       {links.map(({ href, label, icon, tone, separatorBefore, hasUpdate }) => {
         const isStaffRootSiblingPath =
           href === "/staff" && STAFF_ROOT_SIBLING_SLUGS.includes(pathname.split("/")[2]);
@@ -49,11 +49,11 @@ export function AppNav({ links }: { links: NavLink[] }) {
               className={cn(
                 // Al passaggio del mouse compare solo un contorno grigio scuro,
                 // lo sfondo non cambia.
-                "flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3 py-2.5 text-sm font-medium transition-shadow sm:shrink hover:ring-2 hover:ring-inset hover:ring-neutral-600",
-                tone === "dark" && "bg-brand-black text-white",
-                tone === "accent" && "bg-accent text-accent-foreground",
-                tone === "soft" && "bg-muted text-foreground",
-                !tone && (active ? "bg-accent text-accent-foreground" : "text-foreground"),
+                "flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3 py-2.5 text-sm font-medium transition-[box-shadow,transform] sm:shrink hover:-translate-y-px hover:ring-2 hover:ring-inset hover:ring-neutral-600",
+                tone === "dark" && "raised bg-brand-black text-white",
+                tone === "accent" && "raised bg-accent text-accent-foreground",
+                tone === "soft" && "bg-muted text-foreground shadow-elev-1",
+                !tone && (active ? "raised bg-accent text-accent-foreground" : "text-foreground"),
                 // Voce colorata attiva: contorno pieno per distinguerla.
                 tone && active && "ring-2 ring-inset ring-brand-red",
                 tone === "accent" && active && "ring-brand-black",

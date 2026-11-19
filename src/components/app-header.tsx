@@ -13,7 +13,7 @@ export function AppHeader({
   actions?: ReactNode;
 }) {
   return (
-    <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3 sm:px-6">
+    <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border/70 bg-card/80 px-4 py-3 shadow-elev-1 backdrop-blur-md sm:px-6">
       <div className="flex items-center gap-3">
         <Monogram className="shrink-0" />
         <div>

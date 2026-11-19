@@ -172,7 +172,7 @@ function ProjectGrid({
         const clientName = clientNameByProjectId.get(p.id);
         const counts = countsByProjectId?.get(p.id);
         const card = (
-          <Card className="flex h-full flex-1 flex-col">
+          <Card className="flex h-full flex-1 flex-col transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-elev-2">
             <Link href={`/staff/${p.id}`} className="flex-1">
               <CardContent className="p-5">
                 <div className="flex items-center gap-2">

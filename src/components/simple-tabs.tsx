@@ -30,7 +30,7 @@ export function SimpleTabs({ tabs, defaultKey }: { tabs: SimpleTab[]; defaultKey
             className={cn(
               "rounded-t-md px-3 py-2 text-sm transition-colors",
               active === t.key
-                ? "bg-muted font-bold text-foreground"
+                ? "bg-card font-bold text-foreground shadow-[inset_0_-2px_0_var(--accent)]"
                 : "font-medium text-muted-foreground hover:bg-muted hover:text-foreground",
               t.labelClassName,
             )}
