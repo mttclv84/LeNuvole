@@ -1,13 +1,11 @@
 import { CheckCircle2, Download, FileText, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input, Label } from "@/components/ui/input";
-import { FileInput } from "@/components/ui/file-input";
 import { LiveRefresh } from "@/components/live-refresh";
 import { getStaffContext } from "@/lib/data/staff-context";
 import { formatDate } from "@/lib/utils";
 import type { DocumentItem } from "@/lib/types";
-import { deleteDocument, markDocumentSigned, uploadDocument } from "../../actions";
+import { deleteDocument, markDocumentSigned } from "../../actions";
+import { UploadDocumentsForm } from "./upload-documents-form";
 
 const BUCKET = "project-files";
 const SIGNED_URL_TTL = 60 * 10;
@@ -41,30 +39,7 @@ export default async function StaffDocumentiPage({ params }: { params: Promise<{
           <CardTitle>Carica documento</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={uploadDocument} className="flex flex-wrap items-end gap-3">
-            <input type="hidden" name="project_id" value={projectId} />
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="title">Titolo</Label>
-              <Input id="title" name="title" required className="w-56" />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="category">Cartelle</Label>
-              <select id="category" name="category" defaultValue="other" className="h-10 rounded-md border border-border bg-card px-3 text-sm">
-                <option value="order_confirmation">Conferma d&apos;ordine</option>
-                <option value="crew">Maestranze</option>
-                <option value="manual">Manuale</option>
-                <option value="other">Altro</option>
-              </select>
-            </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="requires_signature" /> Richiede firma cliente
-            </label>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="file">File</Label>
-              <FileInput id="file" name="file" required />
-            </div>
-            <Button type="submit" size="sm">Carica</Button>
-          </form>
+          <UploadDocumentsForm projectId={projectId} />
         </CardContent>
       </Card>
 

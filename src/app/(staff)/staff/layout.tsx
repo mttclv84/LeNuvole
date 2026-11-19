@@ -37,7 +37,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
         <AppNav links={links} />
       </div>
       <div className="flex flex-1 flex-col">
-        <AppHeader title="Management Lavori" subtitle={`${profile.display_name} · ${ROLE_LABEL[profile.role]}`} />
+        <AppHeader title="ZeroCasin Organizer" subtitle={`${profile.display_name} · ${ROLE_LABEL[profile.role]}`} />
         <main className="flex-1 bg-background p-4 sm:p-6">{children}</main>
       </div>
     </div>

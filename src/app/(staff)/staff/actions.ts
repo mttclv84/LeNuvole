@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getStaffContext } from "@/lib/data/staff-context";
 import { permissions } from "@/lib/permissions";
-import { safeFileName, todayInItaly } from "@/lib/utils";
+import { todayInItaly } from "@/lib/utils";
 import { BUDGET_KIND_LABEL, type BudgetKind } from "@/lib/types";
 
 const BUCKET = "project-files";
@@ -277,21 +277,34 @@ export async function deleteWorkItem(formData: FormData) {
 // Foto / disegni / render
 // ---------------------------------------------------------------------------
 
-export async function uploadMedia(formData: FormData) {
+// I file vengono caricati dal browser direttamente su Storage (più file alla
+// volta, senza il limite di dimensione delle server action); qui si
+// registrano solo le righe, controllando che i percorsi siano davvero nella
+// cartella giusta del cantiere.
+const MEDIA_TYPES = ["photo", "drawing", "render"] as const;
+
+export async function registerMedia(input: {
+  project_id: string;
+  type: string;
+  caption: string;
+  paths: string[];
+}) {
   await getStaffContext();
   const supabase = await createClient();
-  const project_id = str(formData, "project_id");
-  const type = str(formData, "type") || "photo";
-  const caption = str(formData, "caption");
-  const file = formData.get("file") as File | null;
-  if (!file || file.size === 0) return;
+  const type = (MEDIA_TYPES as readonly string[]).includes(input.type) ? input.type : "photo";
+  const prefix = `${input.project_id}/media/`;
+  const paths = input.paths.filter((p) => p.startsWith(prefix) && !p.includes(".."));
+  if (paths.length === 0) return;
 
-  const path = `${project_id}/media/${crypto.randomUUID()}-${safeFileName(file.name)}`;
-  const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, file);
-  if (uploadError) return;
-
-  await supabase.from("media").insert({ project_id, type, caption: caption || null, storage_path: path });
-  revalidatePath(`/staff/${project_id}/foto`);
+  await supabase.from("media").insert(
+    paths.map((storage_path) => ({
+      project_id: input.project_id,
+      type,
+      caption: input.caption.trim() || null,
+      storage_path,
+    })),
+  );
+  revalidatePath(`/staff/${input.project_id}/foto`);
 }
 
 export async function deleteMedia(formData: FormData) {
@@ -310,24 +323,31 @@ export async function deleteMedia(formData: FormData) {
 // Documenti
 // ---------------------------------------------------------------------------
 
-export async function uploadDocument(formData: FormData) {
+const DOCUMENT_CATEGORIES = ["order_confirmation", "crew", "manual", "other"] as const;
+
+export async function registerDocuments(input: {
+  project_id: string;
+  category: string;
+  requires_signature: boolean;
+  files: { title: string; path: string }[];
+}) {
   await getStaffContext();
   const supabase = await createClient();
-  const project_id = str(formData, "project_id");
-  const category = str(formData, "category") || "other";
-  const title = str(formData, "title");
-  const requires_signature = formData.get("requires_signature") === "on";
-  const file = formData.get("file") as File | null;
-  if (!file || file.size === 0 || !title) return;
+  const category = (DOCUMENT_CATEGORIES as readonly string[]).includes(input.category) ? input.category : "other";
+  const prefix = `${input.project_id}/documents/`;
+  const files = input.files.filter((f) => f.path.startsWith(prefix) && !f.path.includes("..") && f.title.trim());
+  if (files.length === 0) return;
 
-  const path = `${project_id}/documents/${crypto.randomUUID()}-${safeFileName(file.name)}`;
-  const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, file);
-  if (uploadError) return;
-
-  await supabase
-    .from("documents")
-    .insert({ project_id, category, title, storage_path: path, requires_signature });
-  revalidatePath(`/staff/${project_id}/documenti`);
+  await supabase.from("documents").insert(
+    files.map((f) => ({
+      project_id: input.project_id,
+      category,
+      title: f.title.trim().slice(0, 200),
+      storage_path: f.path,
+      requires_signature: input.requires_signature,
+    })),
+  );
+  revalidatePath(`/staff/${input.project_id}/documenti`);
 }
 
 export async function markDocumentSigned(formData: FormData) {
