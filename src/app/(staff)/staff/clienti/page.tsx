@@ -66,6 +66,19 @@ export default async function ClientiPage() {
       <SimpleTabs
         tabs={[
           {
+            key: "gestiti",
+            label: `Attivi (${managed.length})`,
+            // Sfondo nero fisso per far risaltare il verde.
+            labelClassName: "bg-brand-black text-status-green hover:bg-brand-black hover:text-status-green",
+            content: (
+              <ClientList
+                clients={managed}
+                projectLabelsByClient={projectLabelsByClient}
+                emptyLabel="Nessun cliente con un cantiere abbinato ancora."
+              />
+            ),
+          },
+          {
             key: "registrati",
             label: `Registrati (${registered.length})`,
             content: (
@@ -73,18 +86,6 @@ export default async function ClientiPage() {
                 clients={registered}
                 projectLabelsByClient={projectLabelsByClient}
                 emptyLabel="Nessun cliente registrato senza cantiere."
-              />
-            ),
-          },
-          {
-            key: "gestiti",
-            label: `Gestiti (${managed.length})`,
-            labelClassName: "text-status-green",
-            content: (
-              <ClientList
-                clients={managed}
-                projectLabelsByClient={projectLabelsByClient}
-                emptyLabel="Nessun cliente con un cantiere abbinato ancora."
               />
             ),
           },

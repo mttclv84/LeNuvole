@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Trash2 } from "lucide-react";
+import { Camera, FileText, MessageSquare, Plus, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
@@ -29,6 +29,28 @@ export default async function StaffProjectsPage() {
   const preparing = notArchived.filter((p) => !p.work_start_date);
   const active = notArchived.filter((p) => p.work_start_date);
   const archived = items.filter((p) => p.is_archived);
+  // Contatori foto/documenti/messaggi per i soli cantieri attivi. Una query
+  // "count" per tabella e cantiere (head: true, nessuna riga scaricata):
+  // evita il limite di 1000 righe che avrebbe un'unica select.
+  const countFor = async (table: "media" | "documents" | "messages", projectId: string) => {
+    const { count } = await supabase
+      .from(table)
+      .select("id", { count: "exact", head: true })
+      .eq("project_id", projectId);
+    return count ?? 0;
+  };
+  const countsByProjectId = new Map<string, ProjectCounts>(
+    await Promise.all(
+      active.map(async (p) => {
+        const [photos, documents, messages] = await Promise.all([
+          countFor("media", p.id),
+          countFor("documents", p.id),
+          countFor("messages", p.id),
+        ]);
+        return [p.id, { photos, documents, messages }] as const;
+      }),
+    ),
+  );
   const allClients = (clients ?? []) as Profile[];
   // Un cliente può avere più cantieri: si sceglie tra tutti i clienti attivi.
   const selectableClients = allClients.filter((c) => c.active);
@@ -102,7 +124,14 @@ export default async function StaffProjectsPage() {
           {
             key: "attivi",
             label: `Cantieri attivi (${active.length})`,
-            content: <ProjectGrid projects={active} clientNameByProjectId={clientNameByProjectId} showDeactivate />,
+            content: (
+              <ProjectGrid
+                projects={active}
+                clientNameByProjectId={clientNameByProjectId}
+                countsByProjectId={countsByProjectId}
+                showDeactivate
+              />
+            ),
           },
           {
             key: "disattivati",
@@ -115,14 +144,22 @@ export default async function StaffProjectsPage() {
   );
 }
 
+interface ProjectCounts {
+  photos: number;
+  documents: number;
+  messages: number;
+}
+
 function ProjectGrid({
   projects,
   clientNameByProjectId,
+  countsByProjectId,
   showDeactivate,
   showDelete,
 }: {
   projects: Project[];
   clientNameByProjectId: Map<string, string>;
+  countsByProjectId?: Map<string, ProjectCounts>;
   showDeactivate?: boolean;
   showDelete?: boolean;
 }) {
@@ -133,6 +170,7 @@ function ProjectGrid({
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {projects.map((p) => {
         const clientName = clientNameByProjectId.get(p.id);
+        const counts = countsByProjectId?.get(p.id);
         const card = (
           <Card className="flex h-full flex-1 flex-col">
             <Link href={`/staff/${p.id}`} className="flex-1">
@@ -140,6 +178,22 @@ function ProjectGrid({
                 <div className="flex items-center gap-2">
                   <StatusLightDot status={p.status_light} />
                   <p className="font-semibold">{p.client_label}</p>
+                  {counts && (
+                    <div className="ml-auto flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-0.5" title="Foto">
+                        <Camera className="h-3.5 w-3.5" aria-label="Foto" />
+                        {counts.photos}
+                      </span>
+                      <span className="flex items-center gap-0.5" title="Documenti">
+                        <FileText className="h-3.5 w-3.5" aria-label="Documenti" />
+                        {counts.documents}
+                      </span>
+                      <span className="flex items-center gap-0.5" title="Messaggi">
+                        <MessageSquare className="h-3.5 w-3.5" aria-label="Messaggi" />
+                        {counts.messages}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">{STATUS_LIGHT_LABEL[p.status_light]}</p>
                 <p className="mt-2 text-sm">

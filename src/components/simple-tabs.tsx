@@ -14,7 +14,7 @@ export interface SimpleTab {
 
 // Tab di contenuto (non di navigazione: nessun cambio URL), usato per
 // alternare due elenchi nella stessa pagina — es. Cantieri Attivi/
-// Disattivati, Clienti Registrati/Gestiti.
+// Disattivati, Clienti Attivi/Registrati.
 export function SimpleTabs({ tabs, defaultKey }: { tabs: SimpleTab[]; defaultKey?: string }) {
   const [active, setActive] = useState(defaultKey ?? tabs[0]?.key);
   const current = tabs.find((t) => t.key === active) ?? tabs[0];
