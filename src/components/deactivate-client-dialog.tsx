@@ -11,10 +11,13 @@ import { parseEuroAmount } from "@/lib/utils";
 export function DeactivateClientDialog({
   clientId,
   clientName,
+  activeProjects,
   action,
 }: {
   clientId: string;
   clientName: string;
+  // Cantieri non ancora disattivati che verranno disattivati con il cliente.
+  activeProjects: string[];
   action: (formData: FormData) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
@@ -43,6 +46,12 @@ export function DeactivateClientDialog({
           <p className="text-sm text-muted-foreground">
             Il cliente &quot;{clientName}&quot; non potrà più accedere al portale e passerà tra i Disattivati.
           </p>
+          {activeProjects.length > 0 && (
+            <p className="rounded-md bg-status-red/10 px-3 py-2 text-sm text-status-red">
+              Verrà disattivato in automatico anche {activeProjects.length > 1 ? "i cantieri" : "il cantiere"}:{" "}
+              <span className="font-semibold">{activeProjects.join(", ")}</span>
+            </p>
+          )}
           <div className="flex flex-col gap-1.5">
             <Label htmlFor={`deactivation-reason-${clientId}`}>Motivazione della disattivazione</Label>
             <Textarea

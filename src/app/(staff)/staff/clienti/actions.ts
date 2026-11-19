@@ -254,6 +254,14 @@ export async function toggleClientActive(formData: FormData) {
         : { active, deactivation_reason: reason, deactivated_at: new Date().toISOString() },
     )
     .eq("id", id);
+
+  // Un cliente disattivato porta con sé i suoi cantieri ancora attivi (o in
+  // fase preparatoria): passano tra i Disattivati. Alla riattivazione del
+  // cliente i cantieri NON tornano attivi da soli, si riattivano a mano.
+  if (!active) {
+    await supabase.from("projects").update({ is_archived: true }).eq("client_id", id).eq("is_archived", false);
+    revalidatePath("/staff");
+  }
   revalidatePath("/staff/clienti");
 }
 

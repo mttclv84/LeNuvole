@@ -36,6 +36,12 @@ export default async function ClientiPage() {
     if (!p.client_id) continue;
     projectLabelsByClient.set(p.client_id, [...(projectLabelsByClient.get(p.client_id) ?? []), p.client_label]);
   }
+  // Cantieri non disattivati: vengono disattivati insieme al cliente.
+  const activeProjectLabelsByClient = new Map<string, string[]>();
+  for (const p of projectList) {
+    if (!p.client_id || p.is_archived) continue;
+    activeProjectLabelsByClient.set(p.client_id, [...(activeProjectLabelsByClient.get(p.client_id) ?? []), p.client_label]);
+  }
 
   const active = clients.filter((c) => c.active);
   const registered = active.filter((c) => !projectLabelsByClient.has(c.id));
@@ -82,6 +88,7 @@ export default async function ClientiPage() {
                 clients={managed}
                 staffNameById={staffNameById}
                 projectLabelsByClient={projectLabelsByClient}
+                activeProjectLabelsByClient={activeProjectLabelsByClient}
                 emptyLabel="Nessun cliente con un cantiere abbinato ancora."
               />
             ),
@@ -165,6 +172,7 @@ function ClientList({
   clients,
   staffNameById,
   projectLabelsByClient,
+  activeProjectLabelsByClient,
   emptyLabel,
   showDelete,
 }: {
@@ -172,6 +180,7 @@ function ClientList({
   clients: Profile[];
   staffNameById: Map<string, string>;
   projectLabelsByClient: Map<string, string[]>;
+  activeProjectLabelsByClient?: Map<string, string[]>;
   emptyLabel: string;
   showDelete?: boolean;
 }) {
@@ -223,7 +232,12 @@ function ClientList({
                   <Badge variant={c.active ? "green" : "red"}>{c.active ? "Attivo" : "Disattivato"}</Badge>
                   <EditClientModal client={c} />
                   {c.active ? (
-                    <DeactivateClientDialog clientId={c.id} clientName={c.display_name} action={toggleClientActive} />
+                    <DeactivateClientDialog
+                      clientId={c.id}
+                      clientName={c.display_name}
+                      activeProjects={activeProjectLabelsByClient?.get(c.id) ?? []}
+                      action={toggleClientActive}
+                    />
                   ) : (
                     <form action={toggleClientActive}>
                       <input type="hidden" name="id" value={c.id} />
