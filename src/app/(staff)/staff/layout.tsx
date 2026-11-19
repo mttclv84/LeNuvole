@@ -1,4 +1,4 @@
-import { BarChart3, Building2, CalendarClock, ScrollText, Timer, UserCog, Users } from "lucide-react";
+import { BarChart3, Building2, Wallet, CalendarClock, ScrollText, Timer, UserCog, Users } from "lucide-react";
 import { AppNav, type NavLink } from "@/components/app-nav";
 import { AppHeader } from "@/components/app-header";
 import { getStaffContext } from "@/lib/data/staff-context";
@@ -26,6 +26,9 @@ export default async function StaffLayout({ children }: { children: React.ReactN
       icon: <ScrollText className="h-4 w-4" />,
       separatorBefore: !canSeeUsers,
     });
+  }
+  if (permissions.viewCashflow(profile.role)) {
+    links.push({ href: "/staff/cashflow", label: "Cashflow", icon: <Wallet className="h-4 w-4" /> });
   }
 
   return (

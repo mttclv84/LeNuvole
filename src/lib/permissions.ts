@@ -18,6 +18,9 @@ export const permissions = {
   // Registro delle modifiche (Logs).
   viewLogs: (role: UserRole) => isOwner(role),
 
+  // Cashflow: panoramica di tutti i Portafogli cliente.
+  viewCashflow: (role: UserRole) => isOwner(role),
+
   // Cancellazione definitiva di account, cantieri e commesse (non reversibile).
   deleteForever: (role: UserRole) => isOwner(role),
 
