@@ -40,7 +40,7 @@ export default async function ManagementCantieriPage() {
         <LiveRefresh channel="management-cantieri" subscriptions={[{ table: "projects" }]} />
         <Card>
           <CardHeader>
-            <CardTitle>Management Cantieri</CardTitle>
+            <CardTitle>Management Lavori</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">Nessun cantiere attivo al momento.</p>

@@ -9,9 +9,9 @@ export default async function StaffLayout({ children }: { children: React.ReactN
   const { profile } = await getStaffContext();
 
   const links: NavLink[] = [
-    { href: "/staff/clienti", label: "Clienti", icon: <Users className="h-4 w-4" /> },
-    { href: "/staff", label: "Cantieri", icon: <Building2 className="h-4 w-4" />, emphasis: true },
-    { href: "/staff/management-cantieri", label: "Management Cantieri", icon: <CalendarClock className="h-4 w-4" /> },
+    { href: "/staff/clienti", label: "Clienti", icon: <Users className="h-4 w-4" />, tone: "soft" },
+    { href: "/staff", label: "Cantieri", icon: <Building2 className="h-4 w-4" />, tone: "dark" },
+    { href: "/staff/management-cantieri", label: "Management Lavori", icon: <CalendarClock className="h-4 w-4" />, tone: "accent" },
     { href: "/staff/tempi", label: "Tempi", icon: <Timer className="h-4 w-4" /> },
     { href: "/staff/monitor", label: "Monitor", icon: <BarChart3 className="h-4 w-4" /> },
   ];
@@ -34,7 +34,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
         <AppNav links={links} />
       </div>
       <div className="flex flex-1 flex-col">
-        <AppHeader title="Pannello Le Nuvole" subtitle={`${profile.display_name} · ${ROLE_LABEL[profile.role]}`} />
+        <AppHeader title="Management Lavori" subtitle={`${profile.display_name} · ${ROLE_LABEL[profile.role]}`} />
         <main className="flex-1 bg-background p-4 sm:p-6">{children}</main>
       </div>
     </div>

@@ -14,7 +14,7 @@ const HOUSE_TOP = 12;
 const HOUSE_BOTTOM = 92;
 const TOTAL_HEIGHT = HOUSE_BOTTOM - HOUSE_TOP;
 
-// Stessi 3 colori del semaforo usato in Management Cantieri: rosso a inizio
+// Stessi 3 colori del semaforo usato in Management Lavori: rosso a inizio
 // lavori, arancio a meta', verde a lavori conclusi.
 const PROGRESS_STOPS: [number, [number, number, number]][] = [
   [0, [250, 87, 87]], // --status-red / --brand-red (#fa5757)
