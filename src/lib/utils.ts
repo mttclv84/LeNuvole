@@ -49,3 +49,12 @@ export function safeFileName(name: string) {
     .replace(/^_|_$/g, "");
   return cleaned || "file";
 }
+
+// Importo scritto a mano in formato italiano o semplice: "25.000", "25.000,50",
+// "25000,5", "25000.50", "€ 25 000". NaN se non è un numero.
+export function parseEuroAmount(input: string) {
+  const s = input.replace(/[€\s]/g, "");
+  if (s.includes(",")) return Number(s.replace(/\./g, "").replace(",", "."));
+  if (/^\d{1,3}(\.\d{3})+$/.test(s)) return Number(s.replace(/\./g, ""));
+  return Number(s);
+}

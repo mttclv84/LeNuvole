@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
-import { Label, Textarea } from "@/components/ui/input";
+import { Input, Label, Textarea } from "@/components/ui/input";
+import { parseEuroAmount } from "@/lib/utils";
 
 // Disattivazione di un cliente: si apre un popup e la motivazione è
 // obbligatoria (resta visibile tra i Disattivati e nei Logs).
@@ -18,7 +19,12 @@ export function DeactivateClientDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
-  const valid = reason.trim().length >= 3;
+  const [quoteSubject, setQuoteSubject] = useState("");
+  const [quoteAmount, setQuoteAmount] = useState("");
+  // Preventivo facoltativo, ma se si compila un campo serve anche l'altro.
+  const quoteStarted = quoteSubject.trim() !== "" || quoteAmount.trim() !== "";
+  const quoteComplete = quoteSubject.trim() !== "" && parseEuroAmount(quoteAmount) > 0;
+  const valid = reason.trim().length >= 3 && (!quoteStarted || quoteComplete);
 
   return (
     <>
@@ -50,6 +56,37 @@ export function DeactivateClientDialog({
               autoFocus
             />
           </div>
+          <fieldset className="flex flex-col gap-3 rounded-md border border-border p-3">
+            <legend className="px-1 text-xs font-medium text-muted-foreground">
+              Preventivo presentato e non accettato (facoltativo)
+            </legend>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor={`quote-subject-${clientId}`}>Oggetto del preventivo</Label>
+              <Input
+                id={`quote-subject-${clientId}`}
+                name="quote_subject"
+                value={quoteSubject}
+                onChange={(e) => setQuoteSubject(e.target.value)}
+                placeholder="es. Ristrutturazione bagno e cucina"
+                maxLength={300}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor={`quote-amount-${clientId}`}>Importo (€)</Label>
+              <Input
+                id={`quote-amount-${clientId}`}
+                name="quote_amount"
+                inputMode="decimal"
+                value={quoteAmount}
+                onChange={(e) => setQuoteAmount(e.target.value)}
+                placeholder="es. 25000"
+                className="w-40"
+              />
+            </div>
+            {quoteStarted && !quoteComplete && (
+              <p className="text-xs text-status-red">Per registrare il preventivo servono oggetto e importo.</p>
+            )}
+          </fieldset>
           <Button type="submit" variant="destructive" disabled={!valid}>
             Disattiva
           </Button>

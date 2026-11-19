@@ -32,6 +32,24 @@ export interface Profile {
   // Motivazione e data della disattivazione (migration 0019).
   deactivation_reason?: string | null;
   deactivated_at?: string | null;
+  // Utenza staff che ha registrato il cliente (migration 0020).
+  created_by?: string | null;
+}
+
+// Preventivi (migration 0020). Per ora si registrano solo quelli non
+// accettati, alla disattivazione di un cliente.
+export type QuoteStatus = "sent" | "accepted" | "rejected";
+
+export interface Quote {
+  id: string;
+  client_id: string | null;
+  client_name: string;
+  subject: string;
+  amount: number;
+  status: QuoteStatus;
+  reason: string | null;
+  created_by: string | null;
+  created_at: string;
 }
 
 export const LEAD_SOURCE_LABEL = {

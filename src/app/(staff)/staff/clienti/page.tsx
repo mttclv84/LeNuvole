@@ -1,15 +1,15 @@
-import { Download, Trash2 } from "lucide-react";
+import { ChevronRight, Download, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SimpleTabs } from "@/components/simple-tabs";
 import { LiveRefresh } from "@/components/live-refresh";
 import { ConfirmWordDialog } from "@/components/confirm-word-dialog";
 import { DeactivateClientDialog } from "@/components/deactivate-client-dialog";
-import { formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
 import { getStaffContext } from "@/lib/data/staff-context";
 import { permissions } from "@/lib/permissions";
 import { withEmails } from "@/lib/data/backfill-emails";
-import { LEAD_SOURCE_LABEL, type Profile, type Project } from "@/lib/types";
+import { LEAD_SOURCE_LABEL, type Profile, type Project, type Quote } from "@/lib/types";
 import { CreateClientForm } from "./create-client-form";
 import { EditClientModal } from "./edit-client-modal";
 import { deleteClientPermanently, toggleClientActive } from "./actions";
@@ -18,10 +18,15 @@ export default async function ClientiPage() {
   const { supabase, profile } = await getStaffContext();
   const canDeleteForever = permissions.deleteForever(profile.role);
 
-  const [{ data: clientsData }, { data: projects }] = await Promise.all([
+  const [{ data: clientsData }, { data: projects }, { data: staffData }, { data: quotesData }] = await Promise.all([
     supabase.from("profiles").select("*").eq("role", "client").order("last_name"),
     supabase.from("projects").select("*").order("client_label"),
+    supabase.from("profiles").select("id, display_name").neq("role", "client"),
+    supabase.from("quotes").select("*").eq("status", "rejected").order("created_at", { ascending: false }),
   ]);
+  // Nome di chi ha registrato ogni cliente (solo account staff).
+  const staffNameById = new Map(((staffData ?? []) as Pick<Profile, "id" | "display_name">[]).map((s) => [s.id, s.display_name]));
+  const rejectedQuotes = ((quotesData ?? []) as Quote[]).map((q) => ({ ...q, amount: Number(q.amount) }));
   const clients = await withEmails((clientsData ?? []) as Profile[]);
   const projectList = (projects ?? []) as Project[];
 
@@ -75,6 +80,7 @@ export default async function ClientiPage() {
             content: (
               <ClientList
                 clients={managed}
+                staffNameById={staffNameById}
                 projectLabelsByClient={projectLabelsByClient}
                 emptyLabel="Nessun cliente con un cantiere abbinato ancora."
               />
@@ -86,6 +92,7 @@ export default async function ClientiPage() {
             content: (
               <ClientList
                 clients={registered}
+                staffNameById={staffNameById}
                 projectLabelsByClient={projectLabelsByClient}
                 emptyLabel="Nessun cliente registrato senza cantiere."
               />
@@ -97,7 +104,9 @@ export default async function ClientiPage() {
             labelClassName: "ml-6 sm:ml-12 text-status-red",
             content: (
               <ClientList
+                header={<RejectedQuotesSummary quotes={rejectedQuotes} />}
                 clients={deactivated}
+                staffNameById={staffNameById}
                 projectLabelsByClient={projectLabelsByClient}
                 emptyLabel="Nessun cliente disattivato."
                 showDelete={canDeleteForever}
@@ -110,13 +119,58 @@ export default async function ClientiPage() {
   );
 }
 
+// Riepilogo apribile dei preventivi non accettati, in cima ai Disattivati:
+// chiuso mostra subito numero e valore totale, aperto il dettaglio.
+function RejectedQuotesSummary({ quotes }: { quotes: Quote[] }) {
+  const total = quotes.reduce((s, q) => s + q.amount, 0);
+  return (
+    <details className="group mb-4 rounded-md border border-border bg-muted/50 open:bg-card">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-2.5 text-sm [&::-webkit-details-marker]:hidden">
+        <span className="flex items-center gap-2 font-medium">
+          <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
+          Preventivi non accettati
+          <span className="text-xs font-normal text-muted-foreground">({quotes.length})</span>
+        </span>
+        <span className="font-semibold tabular-nums">{formatCurrency(total)}</span>
+      </summary>
+      <div className="border-t border-border px-4 py-3">
+        {quotes.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Nessuno ancora: si registrano dal popup &quot;Disattiva&quot; di un cliente.
+          </p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-border">
+            {quotes.map((q) => (
+              <li key={q.id} className="flex flex-col gap-0.5 py-2 first:pt-0 last:pb-0">
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="text-sm">
+                    <span className="font-medium">{q.subject}</span>
+                    <span className="text-muted-foreground"> · {q.client_name}</span>
+                  </p>
+                  <span className="shrink-0 text-sm font-semibold tabular-nums">{formatCurrency(q.amount)}</span>
+                </div>
+                {q.reason && <p className="text-xs text-status-red">Motivo: {q.reason}</p>}
+                <p className="text-[10px] text-muted-foreground">{formatDate(q.created_at)}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </details>
+  );
+}
+
 function ClientList({
+  header,
   clients,
+  staffNameById,
   projectLabelsByClient,
   emptyLabel,
   showDelete,
 }: {
+  header?: React.ReactNode;
   clients: Profile[];
+  staffNameById: Map<string, string>;
   projectLabelsByClient: Map<string, string[]>;
   emptyLabel: string;
   showDelete?: boolean;
@@ -124,6 +178,7 @@ function ClientList({
   return (
     <Card>
       <CardContent className="pt-5">
+        {header}
         {clients.length === 0 ? (
           <p className="text-sm text-muted-foreground">{emptyLabel}</p>
         ) : (
@@ -154,6 +209,10 @@ function ClientList({
                     )}
                   </p>
                   {c.notes && <p className="mt-1 text-xs italic text-muted-foreground">{c.notes}</p>}
+                  <p className="mt-1 text-[10px] text-muted-foreground/80">
+                    Registrato il {formatDate(c.created_at)}
+                    {c.created_by && staffNameById.has(c.created_by) && ` da ${staffNameById.get(c.created_by)}`}
+                  </p>
                   {!c.active && c.deactivation_reason && (
                     <p className="mt-1 text-xs text-status-red">
                       Disattivato{c.deactivated_at && ` il ${formatDate(c.deactivated_at)}`}: {c.deactivation_reason}

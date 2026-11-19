@@ -121,6 +121,11 @@ export function describeAuditEntry(entry: AuditLogEntry): string {
     case "project_timing":
       return op === "insert" ? "Ore previste salvate" : "Ore previste modificate";
 
+    case "quotes":
+      if (op === "insert") return d.status === "rejected" ? "Preventivo non accettato registrato" : "Preventivo registrato";
+      if (op === "delete") return "Preventivo eliminato";
+      return "Preventivo modificato";
+
     case "payments":
       return op === "insert" ? "Pagamento dichiarato cliente" : "Pagamento cliente modificato";
 

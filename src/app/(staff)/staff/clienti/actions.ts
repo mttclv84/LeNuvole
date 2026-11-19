@@ -10,6 +10,7 @@ import { getStaffContext, requireAllowed } from "@/lib/data/staff-context";
 import { permissions } from "@/lib/permissions";
 import { logEvent } from "@/lib/data/log-event";
 import { isLeadSource } from "@/lib/types";
+import { parseEuroAmount } from "@/lib/utils";
 
 function str(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -51,7 +52,7 @@ export async function createClientRecord(
   _prevState: CreateClientState,
   formData: FormData,
 ): Promise<CreateClientState> {
-  await getStaffContext();
+  const { profile: actor } = await getStaffContext();
 
   const first_name = str(formData, "first_name");
   const last_name = str(formData, "last_name");
@@ -101,6 +102,7 @@ export async function createClientRecord(
     address: address || null,
     notes: notes || null,
     lead_source,
+    created_by: actor.id,
   });
   if (profileError) {
     return { error: "Account creato ma la scheda cliente non è stata salvata: contattare l'assistenza." };
@@ -225,6 +227,24 @@ export async function toggleClientActive(formData: FormData) {
   const active = str(formData, "active") === "true";
   const reason = str(formData, "reason").slice(0, 500);
   if (!active && reason.length < 3) return;
+
+  // Preventivo presentato e non accettato (facoltativo): si registra solo se
+  // ci sono sia l'oggetto sia un importo valido.
+  if (!active) {
+    const quoteSubject = str(formData, "quote_subject").slice(0, 300);
+    const quoteAmount = parseEuroAmount(str(formData, "quote_amount"));
+    if (quoteSubject && Number.isFinite(quoteAmount) && quoteAmount > 0) {
+      const { data: client } = await supabase.from("profiles").select("display_name").eq("id", id).maybeSingle();
+      await supabase.from("quotes").insert({
+        client_id: id,
+        client_name: client?.display_name ?? "",
+        subject: quoteSubject,
+        amount: Math.round(quoteAmount * 100) / 100,
+        status: "rejected",
+        reason,
+      });
+    }
+  }
 
   await supabase
     .from("profiles")
