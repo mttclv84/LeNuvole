@@ -19,7 +19,7 @@ export default async function ImpostaPasswordPage() {
       <div className="w-full max-w-sm rounded-md border border-border bg-card p-8 shadow-sm">
         <div className="mb-6 flex flex-col items-center text-center">
           <Logo />
-          <h1 className="mt-4 text-xl font-semibold">Benvenuto/a in Le Nuvole</h1>
+          <h1 className="mt-4 text-xl font-semibold">Benvenuto/a in ZeroCasìn App</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             {user
               ? mustChange

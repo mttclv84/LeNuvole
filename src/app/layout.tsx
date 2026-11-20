@@ -26,12 +26,12 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Le Nuvole Casa&Design — Il tuo progetto",
-  description: "Segui l'avanzamento del tuo progetto Le Nuvole Casa&Design in un unico posto.",
+  title: "ZeroCasìn App — by LeNuvole Casa&Design",
+  description: "ZeroCasìn App by LeNuvole Casa&Design: segui l'avanzamento del tuo progetto in un unico posto.",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Le Nuvole",
+    title: "ZeroCasìn App",
   },
   icons: {
     icon: "/icons/icon-192.png?v=2",

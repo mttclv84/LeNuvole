@@ -75,7 +75,7 @@ export function InstallAppCard() {
       {state === "prompt-ready" && (
         <>
           <p className="text-sm text-muted-foreground">
-            Aggiungi Le Nuvole alla schermata Home per aprirla come un&apos;app, con la sua icona.
+            Aggiungi ZeroCasìn App alla schermata Home per aprirla come un&apos;app, con la sua icona.
           </p>
           <Button size="sm" className="self-start" onClick={handleInstallClick}>
             Installa l&apos;app

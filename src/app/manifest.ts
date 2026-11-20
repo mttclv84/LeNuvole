@@ -4,9 +4,9 @@ import type { MetadataRoute } from "next";
 // riscaricarle dopo il cambio di logo.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Le Nuvole Casa&Design — Il tuo progetto",
-    short_name: "Le Nuvole",
-    description: "Segui l'avanzamento del tuo progetto Le Nuvole Casa&Design in un unico posto.",
+    name: "ZeroCasìn App — by LeNuvole Casa&Design",
+    short_name: "ZeroCasìn",
+    description: "ZeroCasìn App by LeNuvole Casa&Design: segui l'avanzamento del tuo progetto in un unico posto.",
     start_url: "/",
     display: "standalone",
     background_color: "#f7f2f0",

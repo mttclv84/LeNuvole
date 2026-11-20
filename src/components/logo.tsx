@@ -34,11 +34,11 @@ export function Logo({
     <div className={cn("inline-flex select-none items-center gap-3", className)}>
       <AppMark size={48} />
       <div className="flex flex-col leading-tight">
-        <span className={cn("flex items-center gap-1.5 text-base font-light uppercase tracking-wide", textClass)}>
-          Le Nuvole
-          <Triangle className="h-2 w-2.5 text-brand-red" />
+        <span className={cn("text-xl font-extrabold tracking-tight", textClass)}>ZeroCasìn App</span>
+        <span className={cn("flex items-center gap-1 text-[11px] font-light tracking-wide opacity-70", textClass)}>
+          by LeNuvole Casa&amp;Design
+          <Triangle className="h-1.5 w-2 text-brand-red" />
         </span>
-        <span className={cn("text-lg font-extrabold uppercase tracking-tight", textClass)}>Casa &amp; Design</span>
       </div>
     </div>
   );
@@ -49,7 +49,7 @@ export function Logo({
 export function AppMark({ size = 36, className }: { size?: number; className?: string }) {
   return (
     <Image
-      src="/icons/logo.png"
+      src="/icons/app-logo.png"
       alt="Logo"
       width={size}
       height={size}
