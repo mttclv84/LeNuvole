@@ -1,7 +1,7 @@
 // Service worker minimo: rende il portale installabile e cache-a i soli
 // asset statici essenziali. Nessuna cache aggressiva delle pagine, per
 // evitare di mostrare dati di cantiere non aggiornati.
-const CACHE_NAME = "lenuvole-shell-v1";
+const CACHE_NAME = "lenuvole-shell-v2";
 const SHELL_ASSETS = ["/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", (event) => {

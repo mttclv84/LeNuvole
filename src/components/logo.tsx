@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 // Costruzione da Brand Manual Le Nuvole (sezione "Logo", p. 6-10): wordmark
@@ -30,28 +31,34 @@ export function Logo({
 }) {
   const textClass = TONE_CLASS[tone];
   return (
-    <div className={cn("inline-flex select-none flex-col leading-tight", className)}>
-      <span className={cn("flex items-center gap-1.5 text-base font-light uppercase tracking-wide", textClass)}>
-        Le Nuvole
-        <Triangle className="h-2 w-2.5 text-brand-red" />
-      </span>
-      <span className={cn("text-lg font-extrabold uppercase tracking-tight", textClass)}>Casa &amp; Design</span>
+    <div className={cn("inline-flex select-none items-center gap-3", className)}>
+      <AppMark size={48} />
+      <div className="flex flex-col leading-tight">
+        <span className={cn("flex items-center gap-1.5 text-base font-light uppercase tracking-wide", textClass)}>
+          Le Nuvole
+          <Triangle className="h-2 w-2.5 text-brand-red" />
+        </span>
+        <span className={cn("text-lg font-extrabold uppercase tracking-tight", textClass)}>Casa &amp; Design</span>
+      </div>
     </div>
   );
 }
 
-export function Monogram({
-  tone = "auto",
-  className,
-}: {
-  tone?: keyof typeof TONE_CLASS;
-  className?: string;
-}) {
-  const textClass = TONE_CLASS[tone];
+// Marchio dell'app (logo CSN, 2026-11-20): stessa immagine delle icone
+// installate sul telefono (public/icons, generate dal logo fornito).
+export function AppMark({ size = 36, className }: { size?: number; className?: string }) {
   return (
-    <div className={cn("inline-flex select-none flex-col items-center leading-none", className)}>
-      <Triangle className="h-2 w-2.5 text-brand-red" />
-      <span className={cn("text-base font-extrabold", textClass)}>N</span>
-    </div>
+    <Image
+      src="/icons/logo.png"
+      alt="Logo"
+      width={size}
+      height={size}
+      priority
+      className={cn("shrink-0 select-none rounded-[22%] shadow-elev-1", className)}
+    />
   );
+}
+
+export function Monogram({ className }: { className?: string }) {
+  return <AppMark size={36} className={className} />;
 }
