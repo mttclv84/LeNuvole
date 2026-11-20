@@ -26,7 +26,7 @@ import {
   type AreaMinutes,
   type AreaSummary,
 } from "@/lib/time-tracking";
-import { formatDateTime } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import { TIME_AREAS, TIME_AREA_LABEL, type TimeArea, type TimeEntry } from "@/lib/types";
 import { deleteTimeEntry } from "../tempi/actions";
 import { AreaBreakdown, AreaLegend, AreaSwatch, StackedBar } from "./charts";
@@ -145,7 +145,10 @@ export default async function MonitorPage({
     .sort((a, b) => totalOf(b.minutes) - totalOf(a.minutes));
 
   // Avvisi: cantieri attivi in riserva o con ore extra, in qualsiasi area.
-  const alerts = projectCards.filter((c) => worst(c) > 0 && !projectById.get(c.id)?.is_archived);
+  // Compaiono come icona nel riquadro del cantiere (dettaglio al passaggio del mouse).
+  const alertIds = new Set(
+    projectCards.filter((c) => worst(c) > 0 && !projectById.get(c.id)?.is_archived).map((c) => c.id),
+  );
 
   const canCorrectOthers = permissions.correctOthersTime(profile.role);
 
@@ -156,7 +159,6 @@ export default async function MonitorPage({
         subscriptions={[{ table: "time_entries" }, { table: "project_timing" }, { table: "time_people" }]}
       />
 
-      {alerts.length > 0 && <AlertsCard alerts={alerts} />}
 
       {/* Colpo d'occhio: ore di attività globali divise nelle tre aree */}
       <Card>
@@ -215,7 +217,7 @@ export default async function MonitorPage({
           </p>
           <SimpleTabs
             tabs={[
-              { key: "cantiere", label: "Per cantiere", content: <ProjectGauges cards={projectCards} /> },
+              { key: "cantiere", label: "Per cantiere", content: <ProjectGauges cards={projectCards} alertIds={alertIds} /> },
               { key: "cliente", label: "Per cliente", content: <ClientGauges cards={clientCards} /> },
               { key: "persona", label: "Per utenza", content: <PersonList groups={personGroups} /> },
             ]}
@@ -316,54 +318,63 @@ function PageLink({
 }
 
 // Cantieri in riserva o con ore extra, area per area.
-function AlertsCard({ alerts }: { alerts: ProjectCard[] }) {
+// Icona di avviso in alto a destra nel riquadro del cantiere: rossa se c'è
+// un extra, arancio se è solo in riserva. Il dettaglio compare passando sopra
+// col mouse (o toccandola / con il tasto Tab, grazie a focus).
+function AlertIcon({ card }: { card: ProjectCard }) {
+  const issues = [...TIME_AREAS.map((a) => [TIME_AREA_LABEL[a], card.areas[a]] as const), ["Totale", card.total] as const].filter(
+    ([, s]) => severity(s) > 0,
+  );
+  const isOver = issues.some(([, s]) => s.level === "over");
   return (
-    <Card className="border-status-red">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <OctagonAlert className="h-5 w-5 text-status-red" /> Avvisi ore previste
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ul className="flex flex-col divide-y divide-border">
-          {alerts.map((c) => (
-            <li key={c.id} className="flex flex-col gap-1.5 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between">
-              <Link href={`/staff/${c.id}/timing`} className="min-w-0 hover:underline">
-                <span className="font-semibold">{c.name}</span>
-                <span className="text-sm text-muted-foreground"> · {c.clientLabel}</span>
-              </Link>
-              <div className="flex flex-wrap gap-1.5">
-                {[...TIME_AREAS.map((a) => [TIME_AREA_LABEL[a], c.areas[a]] as const), ["Totale", c.total] as const]
-                  .filter(([, s]) => severity(s) > 0)
-                  .map(([label, s]) =>
-                    s.level === "over" ? (
-                      <Badge key={label} variant="red" className="gap-1">
-                        <OctagonAlert className="h-3 w-3" /> {label}: +{formatMinutes(-s.remainingMinutes)} extra
-                      </Badge>
-                    ) : (
-                      <Badge key={label} variant="orange" className="gap-1">
-                        <Fuel className="h-3 w-3" /> {label}: riserva, {formatMinutes(s.remainingMinutes)} residue
-                      </Badge>
-                    ),
-                  )}
-              </div>
-            </li>
-          ))}
+    <div className="group absolute right-3 top-3">
+      <button
+        type="button"
+        aria-label={`Avvisi ore previste: ${issues.map(([label]) => label).join(", ")}`}
+        className={cn(
+          "flex h-8 w-8 items-center justify-center rounded-full",
+          isOver ? "bg-status-red/15 text-status-red" : "bg-status-orange/15 text-status-orange",
+        )}
+      >
+        {isOver ? <OctagonAlert className="h-4.5 w-4.5" /> : <Fuel className="h-4.5 w-4.5" />}
+      </button>
+      <div
+        role="tooltip"
+        className="pointer-events-none invisible absolute right-0 top-9 z-20 w-64 rounded-md border border-border/70 bg-card p-3 opacity-0 shadow-elev-3 transition-opacity group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100"
+      >
+        <p className="mb-2 text-xs font-semibold">Avvisi ore previste</p>
+        <ul className="flex flex-col gap-1.5">
+          {issues.map(([label, s]) =>
+            s.level === "over" ? (
+              <li key={label}>
+                <Badge variant="red" className="gap-1">
+                  <OctagonAlert className="h-3 w-3" /> {label}: +{formatMinutes(-s.remainingMinutes)} extra
+                </Badge>
+              </li>
+            ) : (
+              <li key={label}>
+                <Badge variant="orange" className="gap-1">
+                  <Fuel className="h-3 w-3" /> {label}: riserva, {formatMinutes(s.remainingMinutes)} residue
+                </Badge>
+              </li>
+            ),
+          )}
         </ul>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
-function ProjectGauges({ cards }: { cards: ProjectCard[] }) {
+function ProjectGauges({ cards, alertIds }: { cards: ProjectCard[]; alertIds: Set<string> }) {
   if (cards.length === 0) {
     return <p className="text-sm text-muted-foreground">Nessun cantiere con ore previste o tempo registrato.</p>;
   }
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       {cards.map((c) => (
-        <div key={c.id} className="rounded-md border border-border p-4">
-          <Link href={`/staff/${c.id}/timing`} className="block hover:underline">
+        <div key={c.id} className="relative rounded-md border border-border p-4">
+          {alertIds.has(c.id) && <AlertIcon card={c} />}
+          <Link href={`/staff/${c.id}/timing`} className="block pr-10 hover:underline">
             <p className="font-semibold">{c.name}</p>
             <p className="text-xs text-muted-foreground">{c.clientLabel}</p>
           </Link>
